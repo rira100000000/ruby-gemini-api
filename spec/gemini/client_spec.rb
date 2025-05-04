@@ -419,7 +419,8 @@ RSpec.describe Gemini::Client do
       stub_request(:post, "#{base_url}/models/gemini-2.0-flash-lite:generateContent?key=#{api_key}")
         .with(
           body: {
-            contents: [{ parts: [{ text: prompt }] }]
+            contents: [{ parts: [{ text: prompt }] }],
+            generation_config: {temperature: 0.5}
           }.to_json,
           headers: { "Content-Type" => "application/json" }
         )
@@ -432,6 +433,7 @@ RSpec.describe Gemini::Client do
     it "sends a text-only request and returns Response object" do
       response = client.generate_content(prompt)
       expect(response).to be(response_instance)
+      pp response.text
       expect(response.text).to include("Ruby is a dynamic")
     end
   end

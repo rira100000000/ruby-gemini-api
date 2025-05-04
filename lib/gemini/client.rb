@@ -118,7 +118,7 @@ module Gemini
     
     # Method with usage similar to OpenAI's chat
     def generate_content(prompt, model: "gemini-2.0-flash-lite", system_instruction: nil, 
-                        response_mime_type: nil, response_schema: nil, **parameters, &stream_callback)
+                        response_mime_type: nil, response_schema: nil, temperature: 0.5, **parameters, &stream_callback)
       # For image/text combinations, the prompt is passed as an array
       # example: [{type: "text", text: "What is this?"}, {type: "image_url", image_url: {url: "https://example.com/image.jpg"}}]
       content = format_content(prompt)
@@ -131,18 +131,16 @@ module Gemini
         params[:system_instruction] = format_content(system_instruction)
       end
       
-      if response_mime_type || response_schema
         params[:generation_config] ||= {}
         
-        if response_mime_type
-          params[:generation_config]["response_mime_type"] = response_mime_type
-        end
-        
-        if response_schema
-          params[:generation_config]["response_schema"] = response_schema
-        end
+      if response_mime_type
+        params[:generation_config]["response_mime_type"] = response_mime_type
       end
       
+      if response_schema
+        params[:generation_config]["response_schema"] = response_schema
+      end
+      params[:generation_config]["temperature"] = temperature
       # Merge other parameters
       params.merge!(parameters)
       
@@ -155,7 +153,7 @@ module Gemini
 
     # Streaming text generation
     def generate_content_stream(prompt, model: "gemini-2.0-flash-lite", system_instruction: nil,
-                              response_mime_type: nil, response_schema: nil, **parameters, &block)
+                              response_mime_type: nil, response_schema: nil, temperature: 0.5, **parameters, &block)
       raise ArgumentError, "Block is required for streaming" unless block_given?
       
       content = format_content(prompt)
@@ -168,18 +166,16 @@ module Gemini
         params[:system_instruction] = format_content(system_instruction)
       end
       
-      if response_mime_type || response_schema
-        params[:generation_config] ||= {}
-        
-        if response_mime_type
-          params[:generation_config][:response_mime_type] = response_mime_type
-        end
-        
-        if response_schema
-          params[:generation_config][:response_schema] = response_schema
-        end
+      params[:generation_config] ||= {}
+      
+      if response_mime_type
+        params[:generation_config][:response_mime_type] = response_mime_type
       end
       
+      if response_schema
+        params[:generation_config][:response_schema] = response_schema
+      end
+      params[:generation_config]["temperature"] = temperature
       # Merge other parameters
       params.merge!(parameters)
       

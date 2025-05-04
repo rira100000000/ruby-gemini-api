@@ -9,6 +9,7 @@
 /tmp/
 /generated_images/
 /api_responses/
+/sample_files/
 
 /node_modules/
 /package.json

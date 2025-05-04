@@ -65,7 +65,8 @@ begin
   response = client.generate_content(
     initial_prompt,
     model: "gemini-2.0-flash-lite", # モデル名s
-    system_instruction: system_instruction
+    system_instruction: system_instruction,
+    temperature: 0.5
   )
   
   # Responseクラスを使用して結果を処理
