@@ -138,11 +138,8 @@ module Gemini
     
     # Get function call information
     def function_calls
-      return [] unless valid?
-      
-      first_candidate&.dig("content", "parts")
-        &.select { |part| part.key?("functionCall") }
-        &.map { |part| part["functionCall"] } || []
+      parts = first_candidate.dig("content", "parts") || []
+      parts.map { |part| part["functionCall"] }.compact
     end
     
     # Get response role (usually "model")

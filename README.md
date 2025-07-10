@@ -18,6 +18,81 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Document processing (PDFs and other formats)
 - Context caching for efficient processing
 
+### Function Calling
+
+This library provides an intuitive DSL to define tools for function calling, making it easy to describe your functions to the Gemini model.
+
+#### Basic Usage
+
+```ruby
+require 'gemini'
+
+# Initialize Gemini client
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Define tools using the ToolDefinition DSL
+tools = Gemini::ToolDefinition.new do
+  function :get_current_weather, description: "Get the current weather information" do
+    property :location, type: :string, description: "City name, e.g., Tokyo", required: true
+  end
+end
+
+# User prompt
+user_prompt = "Tell me the current weather in Tokyo."
+
+# Send request with the defined tools
+response = client.generate_content(
+  user_prompt,
+  model: "gemini-1.5-flash", # Or any model that supports function calling
+  tools: tools
+)
+
+# Parse function call from the response
+unless response.function_calls.empty?
+  function_call = response.function_calls.first
+  puts "Function to call: #{function_call['name']}"
+  puts "Arguments: #{function_call['args']}"
+end
+```
+
+#### Advanced Tool Management
+
+You can define multiple functions, add them dynamically, combine tool sets, and manage them easily.
+
+```ruby
+# Define a set of weather tools
+weather_tools = Gemini::ToolDefinition.new do
+  function :get_current_weather, description: "Get the current weather" do
+    property :location, type: :string, description: "City name", required: true
+  end
+end
+
+# Define another set of stock-related tools
+stock_tools = Gemini::ToolDefinition.new do
+  function :get_stock_price, description: "Get the stock price for a symbol" do
+    property :ticker, type: :string, description: "Stock ticker symbol", required: true
+  end
+end
+
+# Combine tool sets using the + operator
+all_tools = weather_tools + stock_tools
+puts "Combined functions: #{all_tools.list_functions}"
+# => Combined functions: [:get_current_weather, :get_stock_price]
+
+# Add a new function later
+all_tools.add_function :send_email, description: "Send an email" do
+  property :to, type: :string, required: true
+  property :body, type: :string, required: true
+end
+puts "After adding a function: #{all_tools.list_functions}"
+# => After adding a function: [:get_current_weather, :get_stock_price, :send_email]
+
+# Delete a function
+all_tools.delete_function(:get_stock_price)
+puts "After deleting a function: #{all_tools.list_functions}"
+# => After deleting a function: [:get_current_weather, :send_email]
+```
+
 ## Installation
 
 Add this line to your application's Gemfile:

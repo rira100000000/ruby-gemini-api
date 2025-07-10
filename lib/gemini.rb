@@ -3,7 +3,8 @@ require "faraday/multipart"
 require "json"
 require 'dotenv/load'
 
-require_relative "gemini/version"
+require_relative 'gemini/version'
+require_relative 'gemini/tool_definition'
 require_relative "gemini/http_headers"
 require_relative "gemini/http"
 require_relative "gemini/client"

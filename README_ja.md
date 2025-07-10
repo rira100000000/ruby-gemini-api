@@ -6,16 +6,21 @@ Google のGemini API用Rubyクライアントライブラリです。このgem�
 
 ## 機能
 
-- Geminiモデルによるテキスト生成
-- 会話履歴付きのチャット機能
-- リアルタイムなテキスト生成のためのストリーミングレスポンス
-- 音声文字起こし機能
-- チャットアプリケーション用のスレッドとメッセージ管理
-- AIタスク実行のためのRun管理
-- 便利なResponseオブジェクト
-- JSONスキーマとenum制約による構造化出力
-- PDF等のドキュメント処理
-- コンテキストキャッシュによる処理の効率化
+* Geminiモデルによるテキスト生成
+* 会話履歴付きのチャット機能
+* リアルタイムなテキスト生成のためのストリーミングレスポンス
+* 音声文字起こし機能
+* チャットアプリケーション用のスレッドとメッセージ管理
+* AIタスク実行のためのRun管理
+* 便利なResponseオブジェクト
+* JSONスキーマとenum制約による構造化出力
+* PDF等のドキュメント処理
+* コンテキストキャッシュによる処理の効率化
+
+### Function Calling (toolsパラメータ・関数呼び出し) 対応
+
+* Gemini APIのFunction Calling（tools/functionDeclarationsパラメータによる関数呼び出し）に対応
+* ユーザー独自のツール・関数スキーマ(JSON Schema)を定義し、Geminiモデルから自動的に関数呼び出しを提案・実行できます
 
 ## インストール
 
@@ -59,6 +64,81 @@ if response.valid?
 else
   puts "エラー: #{response.error}"
 end
+```
+
+### Function Calling（関数呼び出し）の使い方
+
+このライブラリは、Function Callingのツールを定義するための直感的なDSLを提供しており、Geminiモデルに対してあなたの関数を簡単に記述することができます。
+
+#### 基本的な使い方
+
+```ruby
+require 'gemini'
+
+# Geminiクライアントを初期化
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# ToolDefinition DSLを使用してツールを定義
+tools = Gemini::ToolDefinition.new do
+  function :get_current_weather, description: "現在の天気を取得する" do
+    property :location, type: :string, description: "都市名、例：東京", required: true
+  end
+end
+
+# ユーザーからのプロンプト
+user_prompt = "東京の現在の天気を教えて"
+
+# 定義したツールを使ってリクエストを送信
+response = client.generate_content(
+  user_prompt,
+  model: "gemini-1.5-flash", # またはFunction Callingをサポートする他のモデル
+  tools: tools
+)
+
+# レスポンスから関数呼び出しをパース
+unless response.function_calls.empty?
+  function_call = response.function_calls.first
+  puts "呼び出すべき関数: #{function_call['name']}"
+  puts "引数: #{function_call['args']}"
+end
+```
+
+#### 高度なツールの管理
+
+複数の関数を定義したり、動的に追加したり、ツールのセットを結合したりして、簡単に管理することができます。
+
+```ruby
+# 天気に関するツールのセットを定義
+weather_tools = Gemini::ToolDefinition.new do
+  function :get_current_weather, description: "現在の天気を取得する" do
+    property :location, type: :string, description: "都市名", required: true
+  end
+end
+
+# 株価に関する別のツールセットを定義
+stock_tools = Gemini::ToolDefinition.new do
+  function :get_stock_price, description: "銘柄コードの株価を取得する" do
+    property :ticker, type: :string, description: "銘柄コード", required: true
+  end
+end
+
+# + 演算子でツールセットを結合
+all_tools = weather_tools + stock_tools
+puts "結合した関数: #{all_tools.list_functions}"
+# => 結合した関数: [:get_current_weather, :get_stock_price]
+
+# 後から新しい関数を追加
+all_tools.add_function :send_email, description: "メールを送信する" do
+  property :to, type: :string, required: true
+  property :body, type: :string, required: true
+end
+puts "関数追加後: #{all_tools.list_functions}"
+# => 関数追加後: [:get_current_weather, :get_stock_price, :send_email]
+
+# 関数を削除
+all_tools.delete_function(:get_stock_price)
+puts "関数削除後: #{all_tools.list_functions}"
+# => 関数削除後: [:get_current_weather, :send_email]
 ```
 
 ### ストリーミングテキスト生成
@@ -724,6 +804,9 @@ ruby demo/structured_output_demo_ja.rb
 
 # 列挙型で制約されたレスポンス
 ruby demo/enum_response_demo_ja.rb
+
+# 関数呼び出し
+ruby demo/function_calling_ja.rb
 
 # ドキュメント処理
 ruby demo/document_chat_demo.rb path/to/document.pdf

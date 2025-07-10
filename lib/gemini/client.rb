@@ -116,34 +116,30 @@ module Gemini
     
     # Helper methods for convenience
     
-    # Method with usage similar to OpenAI's chat
+        # Method with usage similar to OpenAI's chat
     def generate_content(prompt, model: "gemini-2.0-flash-lite", system_instruction: nil, 
-                        response_mime_type: nil, response_schema: nil, temperature: 0.5, **parameters, &stream_callback)
-      # For image/text combinations, the prompt is passed as an array
-      # example: [{type: "text", text: "What is this?"}, {type: "image_url", image_url: {url: "https://example.com/image.jpg"}}]
+                        response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil, **parameters, &stream_callback)
       content = format_content(prompt)
       params = {
         contents: [content],
         model: model
       }
-      
+
       if system_instruction
         params[:system_instruction] = format_content(system_instruction)
       end
-      
-        params[:generation_config] ||= {}
-        
+      params[:generation_config] ||= {}
+      params[:generation_config]["temperature"] = temperature
       if response_mime_type
         params[:generation_config]["response_mime_type"] = response_mime_type
       end
-      
+
       if response_schema
         params[:generation_config]["response_schema"] = response_schema
       end
-      params[:generation_config]["temperature"] = temperature
-      # Merge other parameters
+      params[:tools] = tools if tools
       params.merge!(parameters)
-      
+
       if block_given?
         chat(parameters: params, &stream_callback)
       else
