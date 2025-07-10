@@ -1,4 +1,4 @@
-[README ‐ 日本語](https://github.com/rira100000000/ruby-gemini-api/wiki/README-%E2%80%90-%E6%97%A5%E6%9C%AC%E8%AA%9E)
+[README ‐ 日本語](https://github.com/rira100000000/ruby-gemini-api/blob/main/README_ja.md)
 # Ruby-Gemini-API
 
 A Ruby client library for Google's Gemini API. This gem provides a simple, intuitive interface for interacting with Gemini's generative AI capabilities, following patterns similar to other AI client libraries.
