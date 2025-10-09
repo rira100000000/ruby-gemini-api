@@ -279,11 +279,11 @@ require 'gemini'
 
 client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
-# Generate an image using Gemini 2.0
+# Generate an image using Gemini 2.5
 response = client.images.generate(
   parameters: {
     prompt: "A beautiful sunset over the ocean with sailing boats",
-    model: "gemini-2.0-flash-exp-image-generation",
+    model: "gemini-2.5-flash-image-preview",
     size: "16:9"
   }
 )
@@ -296,6 +296,72 @@ if response.success? && !response.images.empty?
 else
   puts "Image generation failed: #{response.error}"
 end
+```
+
+#### Image Generation with Multiple Input Images
+
+You can generate new images by combining or editing multiple input images:
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Generate a new image using multiple input images
+response = client.images.generate(
+  parameters: {
+    prompt: "Combine these two images to create a single artistic composition",
+    image_paths: ["path/to/image1.jpg", "path/to/image2.png"],
+    model: "gemini-2.5-flash-image-preview",
+    temperature: 0.7
+  }
+)
+
+# Save the generated image
+if response.success? && response.images.any?
+  response.save_image("combined_image.png")
+  puts "Combined image saved"
+end
+```
+
+You can also use file objects:
+
+```ruby
+# Using file objects
+File.open("image1.jpg", "rb") do |file1|
+  File.open("image2.png", "rb") do |file2|
+    response = client.images.generate(
+      parameters: {
+        prompt: "Combine these images together",
+        images: [file1, file2],
+        model: "gemini-2.5-flash-image-preview"
+      }
+    )
+    
+    if response.success? && response.images.any?
+      response.save_image("result.png")
+    end
+  end
+end
+```
+
+Base64-encoded image data is also supported:
+
+```ruby
+require 'base64'
+
+# Base64-encoded image data
+base64_data1 = Base64.strict_encode64(File.binread("image1.jpg"))
+base64_data2 = Base64.strict_encode64(File.binread("image2.png"))
+
+response = client.images.generate(
+  parameters: {
+    prompt: "Merge these images together",
+    image_base64s: [base64_data1, base64_data2],
+    mime_types: ["image/jpeg", "image/png"],
+    model: "gemini-2.5-flash-image-preview"
+  }
+)
 ```
 
 You can also use Imagen 3 model (Note: This feature is not fully tested yet):
@@ -319,7 +385,7 @@ if response.success? && !response.images.empty?
 end
 ```
 
-For a complete example, check out the `demo/image_generation_demo.rb` file included with the gem.
+For complete examples, check out the `demo/image_generation_demo.rb` and `demo/multi_image_generation_demo.rb` files included with the gem.
 
 ### Audio Transcription
 

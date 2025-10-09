@@ -263,10 +263,10 @@ module Gemini
       end
     end
 
-    # Image generation using Gemini 2.0 model (original code unchanged)
+    # Image generation using Gemini 2.5 model (original code unchanged)
     def gemini_generate(prompt, parameters)
       # Prepare parameters
-      model = parameters[:model] || "gemini-2.0-flash-exp-image-generation"
+      model = parameters[:model] || "gemini-2.5-flash-image-preview"
       
       # Process size parameter (currently not used in Gemini API)
       # aspect_ratio = process_size_parameter(parameters[:size])

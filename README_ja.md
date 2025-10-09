@@ -287,7 +287,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 response = client.images.generate(
   parameters: {
     prompt: "セーリングボートのある海の上の美しい夕日",
-    model: "gemini-2.0-flash-exp-image-generation",
+    model: "gemini-2.5-flash-image-preview",
     size: "16:9"
   }
 )
@@ -300,6 +300,72 @@ if response.success? && !response.images.empty?
 else
   puts "画像生成に失敗しました: #{response.error}"
 end
+```
+
+#### 複数画像を使った画像生成
+
+複数の画像を入力として使用し、それらを合成・編集した新しい画像を生成できます：
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# 複数の画像を使って新しい画像を生成
+response = client.images.generate(
+  parameters: {
+    prompt: "これら2つの画像を組み合わせて、芸術的な1枚の絵を作成してください",
+    image_paths: ["path/to/image1.jpg", "path/to/image2.png"],
+    model: "gemini-2.5-flash-image-preview",
+    temperature: 0.7
+  }
+)
+
+# 生成された画像を保存
+if response.success? && response.images.any?
+  response.save_image("combined_image.png")
+  puts "合成画像を保存しました"
+end
+```
+
+ファイルオブジェクトを使用することもできます：
+
+```ruby
+# ファイルオブジェクトを使用
+File.open("image1.jpg", "rb") do |file1|
+  File.open("image2.png", "rb") do |file2|
+    response = client.images.generate(
+      parameters: {
+        prompt: "これらの画像を組み合わせてください",
+        images: [file1, file2],
+        model: "gemini-2.5-flash-image-preview"
+      }
+    )
+    
+    if response.success? && response.images.any?
+      response.save_image("result.png")
+    end
+  end
+end
+```
+
+Base64エンコードされた画像データも使用できます：
+
+```ruby
+require 'base64'
+
+# Base64エンコードされた画像データ
+base64_data1 = Base64.strict_encode64(File.binread("image1.jpg"))
+base64_data2 = Base64.strict_encode64(File.binread("image2.png"))
+
+response = client.images.generate(
+  parameters: {
+    prompt: "これらの画像を合成してください",
+    image_base64s: [base64_data1, base64_data2],
+    mime_types: ["image/jpeg", "image/png"],
+    model: "gemini-2.5-flash-image-preview"
+  }
+)
 ```
 
 Imagen 3モデルも使用できます（注：この機能はまだ完全にテストされていません）：
@@ -323,7 +389,7 @@ if response.success? && !response.images.empty?
 end
 ```
 
-完全な例は、gemに含まれる`demo/image_generation_demo_ja.rb`ファイルをご覧ください。
+完全な例は、gemに含まれる`demo/image_generation_demo_ja.rb`と`demo/multi_image_generation_demo_ja.rb`ファイルをご覧ください。
 
 ### 音声文字起こし
 

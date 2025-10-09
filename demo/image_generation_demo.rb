@@ -52,14 +52,14 @@ begin
   end
   
   puts "\nSelect a model to use:"
-  puts "1. Gemini 2.0 (gemini-2.0-flash-exp-image-generation)"
+  puts "1. Gemini 2.0 (gemini-2.5-flash-image-preview)"
   puts "2. Imagen 3 (imagen-3.0-generate-002) [Note: Not yet fully tested with this demo]"
   model_choice = gets.chomp.to_i
   model = case model_choice
           when 2
             "imagen-3.0-generate-002"
           else
-            "gemini-2.0-flash-exp-image-generation"
+            "gemini-2.5-flash-image-preview"
           end
 
   puts "\nSelect image size:"

@@ -46,7 +46,7 @@ begin
   begin
     response = client.audio.transcribe(
       parameters: {
-        model: "gemini-1.5-flash", # Geminiのモデルを指定
+        model: "gemini-2.5-flash", # Geminiのモデルを指定
         file: file,
         language: "ja", # 言語を指定（必要に応じて変更してください）
         content_text: "この音声を文字起こししてください。"
