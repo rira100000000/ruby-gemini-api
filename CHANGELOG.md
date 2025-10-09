@@ -8,3 +8,6 @@
 
 ## [0.1.2] - 2025-07-10
 - Add function calling
+
+## [0.1.3] - 2025-10-09
+- Add support for multi-image input

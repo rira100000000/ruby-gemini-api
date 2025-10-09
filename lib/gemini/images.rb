@@ -4,66 +4,62 @@ module Gemini
       @client = client
     end
 
-    # 画像を生成するメインメソッド
+    # Main method to generate images
     def generate(parameters: {})
       prompt = parameters[:prompt]
       raise ArgumentError, "prompt parameter is required" unless prompt
 
-      # モデルの決定（デフォルトはGemini 2.5）
       model = parameters[:model] || "gemini-2.5-flash-image-preview"
       
-      # 入力画像がある場合は画像編集モード
-      if parameters[:image] || parameters[:image_path] || parameters[:image_base64]
-        return generate_with_image(prompt, model, parameters)
+      # Image editing mode if input images are provided (supports single/multiple images)
+      if has_input_images?(parameters)
+        return generate_with_images(prompt, model, parameters)
       end
       
-      # モデルに応じた画像生成処理
+      # Image generation process based on model
       if model.start_with?("imagen")
-        # Imagen 3を使用
+        # Use Imagen 3
         response = imagen_generate(prompt, parameters)
       else
-        # Gemini 2.0を使用
+        # Use Gemini 2.0
         response = gemini_generate(prompt, parameters)
       end
       
-      # レスポンスをラップして返す
+      # Wrap and return response
       Gemini::Response.new(response)
     end
     
     private
+
+    # Check if input images exist (supports single/multiple images)
+    def has_input_images?(parameters)
+      # Single image parameters
+      single_image = parameters[:image] || parameters[:image_path] || parameters[:image_base64]
+      # Multiple image parameters
+      multiple_images = parameters[:images] || parameters[:image_paths] || parameters[:image_base64s]
+      
+      single_image || multiple_images
+    end
     
-    # 画像+テキストによる画像生成（新規追加）
-    def generate_with_image(prompt, model, parameters)
-      # 画像編集用のモデルを使用（明示的に指定されていない場合）
-      if model == "gemini-2.0-flash-exp-image-generation"
-        model = "gemini-2.5-flash-image-preview"
-      end
+    # Image generation with image+text (supports single/multiple images)
+    def generate_with_images(prompt, model, parameters)      
+      # Process image data (supports single/multiple images)
+      image_parts = process_input_images(parameters)
       
-      # 画像データの処理
-      image_data = process_input_image(parameters)
+      # Build content parts (place text first, then images)
+      parts = [{ "text" => prompt }] + image_parts
       
-      # コンテンツ部分の構築
-      parts = [
-        { "text" => prompt },
-        {
-          "inline_data" => {
-            "mime_type" => image_data[:mime_type],
-            "data" => image_data[:data]
-          }
-        }
-      ]
-      
-      # 生成設定の構築
+      # Build generation config
       generation_config = {
         "responseModalities" => ["Image"]
       }
       
-      # 温度設定があれば追加
+      # Add temperature setting if provided
       if parameters[:temperature]
         generation_config["temperature"] = parameters[:temperature]
       end
       
-      # リクエストパラメータの構築
+      # Build request parameters
       request_params = {
         "contents" => [{
           "parts" => parts
@@ -71,14 +67,14 @@ module Gemini
         "generationConfig" => generation_config
       }
       
-      # その他のパラメータをマージ（除外するキーを指定）
-      excluded_keys = [:prompt, :image, :image_path, :image_base64, :model, :temperature]
+      # Merge other parameters (specify keys to exclude)
+      excluded_keys = [:prompt, :image, :image_path, :image_base64, :images, :image_paths, :image_base64s, :model, :temperature]
       parameters.each do |key, value|
         next if excluded_keys.include?(key)
         request_params[key.to_s] = value
       end
       
-      # API呼び出し
+      # API call
       response = @client.json_post(
         path: "models/#{model}:generateContent",
         parameters: request_params
@@ -86,20 +82,71 @@ module Gemini
       
       Gemini::Response.new(response)
     end
+    
+    # Image generation with image+text (kept for backward compatibility)
+    def generate_with_image(prompt, model, parameters)
+      generate_with_images(prompt, model, parameters)
+    end
 
-    # 入力画像の処理（新規追加）
-    def process_input_image(parameters)
+    # Process input images (supports single/multiple images)
+    def process_input_images(parameters)
+      image_parts = []
+      
+      # Process multiple images
+      if parameters[:images] || parameters[:image_paths] || parameters[:image_base64s]
+        # Multiple file objects
+        if parameters[:images]
+          parameters[:images].each_with_index do |image, index|
+            if image.respond_to?(:read)
+              image_data = process_image_io(image)
+              image_parts << create_image_part(image_data)
+            else
+              raise ArgumentError, "Invalid image at index #{index}. Expected file object."
+            end
+          end
+        end
+        
+        # Multiple file paths
+        if parameters[:image_paths]
+          parameters[:image_paths].each_with_index do |path, index|
+            image_data = process_image_file(path)
+            image_parts << create_image_part(image_data)
+          end
+        end
+        
+        # Multiple Base64 data
+        if parameters[:image_base64s]
+          mime_types = parameters[:mime_types] || Array.new(parameters[:image_base64s].size, "image/jpeg")
+          parameters[:image_base64s].each_with_index do |base64_data, index|
+            image_data = {
+              data: base64_data,
+              mime_type: mime_types[index] || "image/jpeg"
+            }
+            image_parts << create_image_part(image_data)
+          end
+        end
+      else
+        # Process single image (for backward compatibility)
+        image_data = process_single_input_image(parameters)
+        image_parts << create_image_part(image_data)
+      end
+      
+      image_parts
+    end
+
+    # Process single input image (for backward compatibility)
+    def process_single_input_image(parameters)
       if parameters[:image_base64]
-        # Base64データが直接提供された場合
+        # When Base64 data is provided directly
         {
           data: parameters[:image_base64],
           mime_type: parameters[:mime_type] || "image/jpeg"
         }
       elsif parameters[:image_path]
-        # ファイルパスが提供された場合
+        # When file path is provided
         process_image_file(parameters[:image_path])
       elsif parameters[:image]
-        # ファイルオブジェクトが提供された場合
+        # When file object is provided
         if parameters[:image].respond_to?(:read)
           process_image_io(parameters[:image])
         else
@@ -110,16 +157,31 @@ module Gemini
       end
     end
 
-    # ファイルパスから画像を処理（新規追加）
+    # Create API part from image data
+    def create_image_part(image_data)
+      {
+        "inline_data" => {
+          "mime_type" => image_data[:mime_type],
+          "data" => image_data[:data]
+        }
+      }
+    end
+
+    # Process input image (old method - kept for backward compatibility)
+    def process_input_image(parameters)
+      process_single_input_image(parameters)
+    end
+
+    # Process image from file path (newly added)
     def process_image_file(file_path)
       raise ArgumentError, "File does not exist: #{file_path}" unless File.exist?(file_path)
       
       require 'base64'
       
-      # MIMEタイプを判定
+      # Determine MIME type
       mime_type = determine_image_mime_type(file_path)
       
-      # ファイルを読み込んでBase64エンコード
+      # Read file and encode as Base64
       file_data = File.binread(file_path)
       base64_data = Base64.strict_encode64(file_data)
       
@@ -129,24 +191,24 @@ module Gemini
       }
     end
 
-    # IOオブジェクトから画像を処理（新規追加）
+    # Process image from IO object (newly added)
     def process_image_io(image_io)
       require 'base64'
       
-      # ファイルの先頭に移動
+      # Move to beginning of file
       image_io.rewind if image_io.respond_to?(:rewind)
       
-      # データを読み込み
+      # Read data
       file_data = image_io.read
       
-      # MIMEタイプを判定（ファイルパスがあれば使用、なければ内容から推測）
+      # Determine MIME type (use file path if available, otherwise infer from content)
       mime_type = if image_io.respond_to?(:path) && image_io.path
                     determine_image_mime_type(image_io.path)
                   else
                     determine_mime_type_from_content(file_data)
                   end
       
-      # Base64エンコード
+      # Base64 encode
       base64_data = Base64.strict_encode64(file_data)
       
       {
@@ -155,7 +217,7 @@ module Gemini
       }
     end
 
-    # ファイルパスから画像のMIMEタイプを判定（新規追加）
+    # Determine image MIME type from file path (newly added)
     def determine_image_mime_type(file_path)
       ext = File.extname(file_path).downcase
       case ext
@@ -172,16 +234,16 @@ module Gemini
       when ".tiff", ".tif"
         "image/tiff"
       else
-        # デフォルトはJPEG
+        # Default to JPEG
         "image/jpeg"
       end
     end
 
-    # ファイル内容からMIMEタイプを判定（新規追加）
+    # Determine MIME type from file content (newly added)
     def determine_mime_type_from_content(data)
       return "image/jpeg" if data.nil? || data.empty?
       
-      # ファイルヘッダーをチェック
+      # Check file header
       header = data[0, 8].bytes
       
       case
@@ -196,25 +258,25 @@ module Gemini
       when header[0..1] == [0x42, 0x4D]
         "image/bmp"
       else
-        # デフォルトはJPEG
+        # Default to JPEG
         "image/jpeg"
       end
     end
 
-    # Gemini 2.0モデルを使用した画像生成（元のコードそのまま）
+    # Image generation using Gemini 2.0 model (original code unchanged)
     def gemini_generate(prompt, parameters)
-      # パラメータの準備
+      # Prepare parameters
       model = parameters[:model] || "gemini-2.0-flash-exp-image-generation"
       
-      # サイズパラメータの処理（現在はGemini APIでは使用しない）
+      # Process size parameter (currently not used in Gemini API)
       # aspect_ratio = process_size_parameter(parameters[:size])
       
-      # 生成設定の構築
+      # Build generation config
       generation_config = {
-        "responseModalities" => ["Text", "Image"]
+        "responseModalities" => ["Image"]  # Image output only, even for text-only image generation
       }
       
-      # リクエストパラメータの構築
+      # Build request parameters
       request_params = {
         "contents" => [{
           "parts" => [
@@ -224,29 +286,29 @@ module Gemini
         "generationConfig" => generation_config
       }
       
-      # API呼び出し
+      # API call
       @client.json_post(
         path: "models/#{model}:generateContent",
         parameters: request_params
       )
     end
     
-    # Imagen 3モデルを使用した画像生成（元のコードそのまま）
+    # Image generation using Imagen 3 model (original code unchanged)
     def imagen_generate(prompt, parameters)
-      # モデル名の取得（デフォルトはImagen 3の標準モデル）
+      # Get model name (default is Imagen 3 standard model)
       model = parameters[:model] || "imagen-3.0-generate-002"
       
-      # サイズパラメータからアスペクト比を取得
+      # Get aspect ratio from size parameter
       aspect_ratio = process_size_parameter(parameters[:size])
       
-      # 画像生成数の設定
+      # Set number of images to generate
       sample_count = parameters[:n] || parameters[:sample_count] || 1
-      sample_count = [[sample_count.to_i, 1].max, 4].min # 1〜4の範囲に制限
+      sample_count = [[sample_count.to_i, 1].max, 4].min # Limit to range 1-4
       
-      # 人物生成の設定
+      # Set person generation setting
       person_generation = parameters[:person_generation] || "ALLOW_ADULT"
       
-      # リクエストパラメータの構築
+      # Build request parameters
       request_params = {
         "instances" => [
           {
@@ -258,20 +320,20 @@ module Gemini
         }
       }
       
-      # アスペクト比が指定されている場合は追加
+      # Add aspect ratio if specified
       request_params["parameters"]["aspectRatio"] = aspect_ratio if aspect_ratio
       
-      # 人物生成設定を追加
+      # Add person generation setting
       request_params["parameters"]["personGeneration"] = person_generation
       
-      # API呼び出し
+      # API call
       @client.json_post(
         path: "models/#{model}:predict",
         parameters: request_params
       )
     end
     
-    # サイズパラメータからアスペクト比を決定（元のコードそのまま）
+    # Determine aspect ratio from size parameter (original code unchanged)
     def process_size_parameter(size)
       return nil unless size
       
@@ -289,7 +351,7 @@ module Gemini
       when "1:1", "3:4", "4:3", "9:16", "16:9"
         size.to_s
       else
-        "1:1" # デフォルト
+        "1:1" # Default
       end
     end
   end
