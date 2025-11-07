@@ -99,6 +99,27 @@ module Gemini
     def safety_blocked?
       finish_reason == "SAFETY"
     end
+
+    # Get grounding metadata (for Google Search grounding)
+    def grounding_metadata
+      first_candidate&.dig("groundingMetadata")
+    end
+
+    # Check if response has grounding metadata
+    def grounded?
+      !grounding_metadata.nil? && !grounding_metadata.empty?
+    end
+
+    # Get grounding chunks (source references)
+    def grounding_chunks
+      grounding_metadata&.dig("groundingChunks") || []
+    end
+
+    # Get search entry point URL (if available)
+    def search_entry_point
+      grounding_metadata&.dig("searchEntryPoint", "renderedContent")
+    end
+    
     
     # Get token usage information
     def usage

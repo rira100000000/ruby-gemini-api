@@ -159,6 +159,61 @@ RSpec.describe Gemini::Response do
     }
   end
 
+  # Mock of a response with grounding metadata
+  let(:grounded_response_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "This is a grounded response with search results." }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0,
+          "groundingMetadata" => {
+            "groundingChunks" => [
+              {
+                "web" => {
+                  "uri" => "https://example.com/article1",
+                  "title" => "Example Article 1"
+                }
+              },
+              {
+                "web" => {
+                  "uri" => "https://example.com/article2",
+                  "title" => "Example Article 2"
+                }
+              }
+            ],
+            "searchEntryPoint" => {
+              "renderedContent" => "https://www.google.com/search?q=test+query"
+            }
+          }
+        }
+      ]
+    }
+  end
+
+  # Mock of a response without grounding metadata
+  let(:non_grounded_response_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "This is a regular response without grounding." }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
   describe '#initialize' do
     it 'stores the raw response data' do
       response = Gemini::Response.new(basic_response_data)
@@ -457,6 +512,147 @@ RSpec.describe Gemini::Response do
     it 'shows nil for text in error responses' do
       response = Gemini::Response.new(error_response_data)
       expect(response.inspect).to eq('#<Gemini::Response text=nil success=false>')
+    end
+  end
+
+  describe '#grounding_metadata' do
+    it 'returns grounding metadata when present' do
+      response = Gemini::Response.new(grounded_response_data)
+      metadata = response.grounding_metadata
+      expect(metadata).to be_a(Hash)
+      expect(metadata).to have_key("groundingChunks")
+      expect(metadata).to have_key("searchEntryPoint")
+    end
+
+    it 'returns nil when grounding metadata is not present' do
+      response = Gemini::Response.new(non_grounded_response_data)
+      expect(response.grounding_metadata).to be_nil
+    end
+
+    it 'returns nil for error responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.grounding_metadata).to be_nil
+    end
+
+    it 'returns nil for empty responses' do
+      response = Gemini::Response.new(empty_response_data)
+      expect(response.grounding_metadata).to be_nil
+    end
+  end
+
+  describe '#grounded?' do
+    it 'returns true when grounding metadata is present' do
+      response = Gemini::Response.new(grounded_response_data)
+      expect(response.grounded?).to be true
+    end
+
+    it 'returns false when grounding metadata is not present' do
+      response = Gemini::Response.new(non_grounded_response_data)
+      expect(response.grounded?).to be false
+    end
+
+    it 'returns false when grounding metadata is empty' do
+      empty_grounding_data = {
+        "candidates" => [
+          {
+            "content" => {
+              "parts" => [{ "text" => "Test" }],
+              "role" => "model"
+            },
+            "groundingMetadata" => {}
+          }
+        ]
+      }
+      response = Gemini::Response.new(empty_grounding_data)
+      expect(response.grounded?).to be false
+    end
+
+    it 'returns false for error responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.grounded?).to be false
+    end
+  end
+
+  describe '#grounding_chunks' do
+    it 'returns grounding chunks when present' do
+      response = Gemini::Response.new(grounded_response_data)
+      chunks = response.grounding_chunks
+      expect(chunks).to be_an(Array)
+      expect(chunks.size).to eq(2)
+      expect(chunks[0]["web"]["uri"]).to eq("https://example.com/article1")
+      expect(chunks[1]["web"]["uri"]).to eq("https://example.com/article2")
+    end
+
+    it 'returns empty array when grounding metadata is not present' do
+      response = Gemini::Response.new(non_grounded_response_data)
+      expect(response.grounding_chunks).to eq([])
+    end
+
+    it 'returns empty array when grounding chunks are not present' do
+      no_chunks_data = {
+        "candidates" => [
+          {
+            "content" => {
+              "parts" => [{ "text" => "Test" }],
+              "role" => "model"
+            },
+            "groundingMetadata" => {
+              "searchEntryPoint" => {
+                "renderedContent" => "https://www.google.com/search?q=test"
+              }
+            }
+          }
+        ]
+      }
+      response = Gemini::Response.new(no_chunks_data)
+      expect(response.grounding_chunks).to eq([])
+    end
+
+    it 'returns empty array for error responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.grounding_chunks).to eq([])
+    end
+  end
+
+  describe '#search_entry_point' do
+    it 'returns search entry point URL when present' do
+      response = Gemini::Response.new(grounded_response_data)
+      expect(response.search_entry_point).to eq("https://www.google.com/search?q=test+query")
+    end
+
+    it 'returns nil when grounding metadata is not present' do
+      response = Gemini::Response.new(non_grounded_response_data)
+      expect(response.search_entry_point).to be_nil
+    end
+
+    it 'returns nil when search entry point is not present' do
+      no_entry_point_data = {
+        "candidates" => [
+          {
+            "content" => {
+              "parts" => [{ "text" => "Test" }],
+              "role" => "model"
+            },
+            "groundingMetadata" => {
+              "groundingChunks" => [
+                {
+                  "web" => {
+                    "uri" => "https://example.com",
+                    "title" => "Example"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+      response = Gemini::Response.new(no_entry_point_data)
+      expect(response.search_entry_point).to be_nil
+    end
+
+    it 'returns nil for error responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.search_entry_point).to be_nil
     end
   end
 end

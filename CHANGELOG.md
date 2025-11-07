@@ -11,3 +11,6 @@
 
 ## [0.1.3] - 2025-10-09
 - Add support for multi-image input
+
+## [0.1.4] - 2025-11-08
+- Add support for grounding search

@@ -214,6 +214,80 @@ puts response.text
 if response.safety_blocked?
   puts "レスポンスは安全上の考慮によりブロックされました"
 end
+
+```
+
+### グラウンディング検索 (Google Search)
+
+Google検索グラウンディング機能を使用して、リアルタイムの情報を取得できます。
+
+#### 基本的な使い方
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Google検索を使用してリアルタイム情報を取得
+response = client.generate_content(
+  "Who won the euro 2024?",
+  model: "gemini-2.0-flash-lite",
+  tools: [{ google_search: {} }]
+)
+
+if response.success?
+  puts response.text
+  
+  # グラウンディング情報を確認
+  if response.grounded?
+    puts "\n参照元ソース:"
+    response.grounding_chunks.each do |chunk|
+      if chunk['web']
+        puts "- #{chunk['web']['title']}"
+        puts "  #{chunk['web']['uri']}"
+      end
+    end
+  end
+end
+```
+
+#### グラウンディングメタデータの確認
+
+```ruby
+# レスポンスがグラウンディングされているか確認
+if response.grounded?
+  # グラウンディングメタデータ全体を取得
+  metadata = response.grounding_metadata
+  
+  # 参照元のチャンク(ソース)を取得
+  chunks = response.grounding_chunks
+  
+  # 検索エントリーポイントを取得
+  entry_point = response.search_entry_point
+end
+```
+
+#### 日本語での質問例
+
+```ruby
+response = client.generate_content(
+  "日本の最新のテクノロジーニュースを3つ教えてください",
+  model: "gemini-2.0-flash-lite",
+  tools: [{ google_search: {} }]
+)
+
+if response.success? && response.grounded?
+  puts response.text
+  puts "\n情報源: #{response.grounding_chunks.length}件"
+end
+```
+
+#### デモアプリケーション
+
+グラウンディング検索のデモは以下のファイルで確認できます:
+
+```bash
+ruby demo/grounding_search_demo_ja.rb
 ```
 
 ### 画像認識
