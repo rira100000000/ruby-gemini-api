@@ -272,6 +272,79 @@ client.files.delete(name: file_name)
 
 For more examples, check out the `demo/vision_demo.rb` and `demo/file_vision_demo.rb` files included with the gem.
 
+### Grounding with Google Search
+
+You can use Gemini API's Google Search grounding feature to retrieve real-time information.
+
+#### Basic Usage
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Use Google Search to get real-time information
+response = client.generate_content(
+  "Who won the euro 2024?",
+  model: "gemini-2.0-flash-lite",
+  tools: [{ google_search: {} }]
+)
+
+if response.success?
+  puts response.text
+  
+  # Check grounding information
+  if response.grounded?
+    puts "\nSource references:"
+    response.grounding_chunks.each do |chunk|
+      if chunk['web']
+        puts "- #{chunk['web']['title']}"
+        puts "  #{chunk['web']['uri']}"
+      end
+    end
+  end
+end
+```
+
+#### Checking Grounding Metadata
+
+```ruby
+# Check if response is grounded
+if response.grounded?
+  # Get full grounding metadata
+  metadata = response.grounding_metadata
+  
+  # Get source chunks (references)
+  chunks = response.grounding_chunks
+  
+  # Get search entry point
+  entry_point = response.search_entry_point
+end
+```
+
+#### Example with Different Topics
+
+```ruby
+response = client.generate_content(
+  "What are the latest AI developments in 2024?",
+  model: "gemini-2.0-flash-lite",
+  tools: [{ google_search: {} }]
+)
+
+if response.success? && response.grounded?
+  puts response.text
+  puts "\nSources: #{response.grounding_chunks.length} references"
+end
+```
+
+#### Demo Application
+
+You can find a grounding search demo in:
+
+```bash
+ruby demo/grounding_search_demo_ja.rb
+```
+
 ### Image Generation
 
 ```ruby
