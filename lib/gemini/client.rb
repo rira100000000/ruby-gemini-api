@@ -117,8 +117,9 @@ module Gemini
     # Helper methods for convenience
     
         # Method with usage similar to OpenAI's chat
-    def generate_content(prompt, model: "gemini-2.0-flash-lite", system_instruction: nil, 
-                        response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil, **parameters, &stream_callback)
+    def generate_content(prompt, model: "gemini-2.0-flash-lite", system_instruction: nil,
+                        response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil,
+                        url_context: false, google_search: false, **parameters, &stream_callback)
       content = format_content(prompt)
       params = {
         contents: [content],
@@ -137,7 +138,11 @@ module Gemini
       if response_schema
         params[:generation_config]["response_schema"] = response_schema
       end
-      params[:tools] = tools if tools
+
+      # Handle tool shortcuts
+      tools = build_tools_array(tools, url_context: url_context, google_search: google_search)
+      params[:tools] = tools if tools && !tools.empty?
+
       params.merge!(parameters)
 
       if block_given?
@@ -149,32 +154,38 @@ module Gemini
 
     # Streaming text generation
     def generate_content_stream(prompt, model: "gemini-2.0-flash-lite", system_instruction: nil,
-                              response_mime_type: nil, response_schema: nil, temperature: 0.5, **parameters, &block)
+                              response_mime_type: nil, response_schema: nil, temperature: 0.5,
+                              url_context: false, google_search: false, **parameters, &block)
       raise ArgumentError, "Block is required for streaming" unless block_given?
-      
+
       content = format_content(prompt)
       params = {
         contents: [content],
         model: model
       }
-      
+
       if system_instruction
         params[:system_instruction] = format_content(system_instruction)
       end
-      
+
       params[:generation_config] ||= {}
-      
+
       if response_mime_type
         params[:generation_config][:response_mime_type] = response_mime_type
       end
-      
+
       if response_schema
         params[:generation_config][:response_schema] = response_schema
       end
       params[:generation_config]["temperature"] = temperature
+
+      # Handle tool shortcuts
+      tools = build_tools_array(nil, url_context: url_context, google_search: google_search)
+      params[:tools] = tools if tools && !tools.empty?
+
       # Merge other parameters
       params.merge!(parameters)
-      
+
       chat(parameters: params, &block)
     end
 
@@ -399,7 +410,29 @@ module Gemini
     end
     
     private
-    
+
+    # Build tools array from explicit tools parameter and shortcuts
+    def build_tools_array(tools, url_context: false, google_search: false)
+      result_tools = []
+
+      # Add existing tools if provided
+      if tools.is_a?(Array)
+        result_tools.concat(tools)
+      elsif tools
+        result_tools << tools
+      end
+
+      # Add url_context tool if requested
+      result_tools << { url_context: {} } if url_context
+
+      # Add google_search tool if requested
+      result_tools << { google_search: {} } if google_search
+
+      # Remove duplicates based on tool keys and return
+      return nil if result_tools.empty?
+      result_tools.uniq { |tool| tool.keys.first }
+    end
+
     # Process stream chunk and pass to callback
     def process_stream_chunk(chunk, &callback)
       if chunk.respond_to?(:dig) && chunk.dig("candidates", 0, "content", "parts", 0, "text")

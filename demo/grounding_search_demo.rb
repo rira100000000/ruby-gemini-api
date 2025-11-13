@@ -20,20 +20,15 @@ begin
   if response.success?
     puts "\nAnswer:"
     puts response.text
-    
-    # Display grounding metadata if available
-    if response.grounding_metadata
+
+    # Display grounding information using simplified methods
+    if response.grounded?
       puts "\n--- Grounding Information ---"
-      puts "Search Entry Point: #{response.grounding_metadata['searchEntryPoint']}" if response.grounding_metadata['searchEntryPoint']
-      
-      if response.grounding_metadata['groundingChunks']
-        puts "\nSource references:"
-        response.grounding_metadata['groundingChunks'].each_with_index do |chunk, i|
-          if chunk['web']
-            puts "#{i+1}. #{chunk['web']['title']}"
-            puts "   URL: #{chunk['web']['uri']}"
-          end
-        end
+      puts "Sources: #{response.grounding_sources.length} references"
+
+      response.grounding_sources.each_with_index do |source, i|
+        puts "\n#{i+1}. #{source[:title]}"
+        puts "   URL: #{source[:url]}"
       end
     end
   else

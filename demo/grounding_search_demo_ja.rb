@@ -20,20 +20,15 @@ begin
   if response.success?
     puts "\n回答:"
     puts response.text
-    
-    # グラウンディングメタデータがあれば表示
-    if response.grounding_metadata
+
+    # 整形されたメソッドを使ってグラウンディング情報を表示
+    if response.grounded?
       puts "\n--- グラウンディング情報 ---"
-      puts "検索エントリーポイント: #{response.grounding_metadata['searchEntryPoint']}" if response.grounding_metadata['searchEntryPoint']
-      
-      if response.grounding_metadata['groundingChunks']
-        puts "\n参照したソース:"
-        response.grounding_metadata['groundingChunks'].each_with_index do |chunk, i|
-          if chunk['web']
-            puts "#{i+1}. #{chunk['web']['title']}"
-            puts "   URL: #{chunk['web']['uri']}"
-          end
-        end
+      puts "参照ソース数: #{response.grounding_sources.length}件"
+
+      response.grounding_sources.each_with_index do |source, i|
+        puts "\n#{i+1}. #{source[:title]}"
+        puts "   URL: #{source[:url]}"
       end
     end
   else
