@@ -237,15 +237,13 @@ response = client.generate_content(
 
 if response.success?
   puts response.text
-  
+
   # グラウンディング情報を確認
   if response.grounded?
     puts "\n参照元ソース:"
-    response.grounding_chunks.each do |chunk|
-      if chunk['web']
-        puts "- #{chunk['web']['title']}"
-        puts "  #{chunk['web']['uri']}"
-      end
+    response.grounding_sources.each do |source|
+      puts "- #{source[:title]}"
+      puts "  #{source[:url]}"
     end
   end
 end
@@ -256,13 +254,15 @@ end
 ```ruby
 # レスポンスがグラウンディングされているか確認
 if response.grounded?
-  # グラウンディングメタデータ全体を取得
+  # 整形されたソース情報を取得（推奨）
+  response.grounding_sources.each do |source|
+    puts "タイトル: #{source[:title]}"
+    puts "URL: #{source[:url]}"
+  end
+
+  # 生のメタデータにアクセスすることも可能
   metadata = response.grounding_metadata
-  
-  # 参照元のチャンク(ソース)を取得
   chunks = response.grounding_chunks
-  
-  # 検索エントリーポイントを取得
   entry_point = response.search_entry_point
 end
 ```
@@ -288,6 +288,86 @@ end
 
 ```bash
 ruby demo/grounding_search_demo_ja.rb
+```
+
+### URL Context
+
+Gemini APIのURL Context機能を使用して、Webページのコンテンツを取得・分析できます。
+
+#### 基本的な使い方
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# URL Contextを使用してWebページを分析（ショートカット）
+response = client.generate_content(
+  "このページの内容を要約してください: https://www.ruby-lang.org/ja/",
+  model: "gemini-2.5-flash",
+  url_context: true
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### 明示的なtoolsパラメータの使用
+
+```ruby
+# 明示的なtoolsパラメータ
+response = client.generate_content(
+  "この2つのページを比較してください: https://www.ruby-lang.org/ja/ と https://www.python.org",
+  model: "gemini-2.5-flash",
+  tools: [{ url_context: {} }]
+)
+```
+
+#### URL ContextとGoogle検索の組み合わせ
+
+```ruby
+# URL ContextとGoogle検索を両方使用
+response = client.generate_content(
+  "https://www.ruby-lang.org/ja/ の情報と最近のRubyニュースを教えてください",
+  model: "gemini-2.5-flash",
+  url_context: true,
+  google_search: true
+)
+```
+
+#### URL Contextメタデータの確認
+
+```ruby
+# URL Contextが使用されたか確認
+if response.url_context?
+  # メタデータ全体を取得
+  metadata = response.url_context_metadata
+
+  # 取得されたURLの情報を取得
+  urls = response.retrieved_urls
+
+  # 各URLの取得ステータスを確認
+  response.url_retrieval_statuses.each do |url_info|
+    puts "URL: #{url_info[:url]}"
+    puts "ステータス: #{url_info[:status]}"
+    puts "タイトル: #{url_info[:title]}" if url_info[:title]
+  end
+end
+```
+
+#### 制限事項
+
+- リクエストあたり最大20個のURL
+- URLあたり最大34MBのコンテンツサイズ
+- YouTube動画やペイウォールコンテンツは非対応
+
+#### デモアプリケーション
+
+URL Contextのデモは以下のファイルで確認できます:
+
+```bash
+ruby demo/url_context_demo_ja.rb https://www.ruby-lang.org/ja/
 ```
 
 ### 画像認識

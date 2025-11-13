@@ -119,6 +119,57 @@ module Gemini
     def search_entry_point
       grounding_metadata&.dig("searchEntryPoint", "renderedContent")
     end
+
+    # Get formatted grounding sources (simplified access)
+    def grounding_sources
+      return [] unless grounded?
+
+      grounding_chunks.map do |chunk|
+        if chunk["web"]
+          {
+            url: chunk["web"]["uri"],
+            title: chunk["web"]["title"],
+            type: "web"
+          }
+        else
+          # Handle other potential chunk types
+          {
+            type: "unknown",
+            data: chunk
+          }
+        end
+      end
+    end
+
+    # Get URL context metadata (for URL Context tool)
+    def url_context_metadata
+      first_candidate&.dig("urlContextMetadata")
+    end
+
+    # Check if response has URL context metadata
+    def url_context?
+      !url_context_metadata.nil? && !url_context_metadata.empty?
+    end
+
+    # Get retrieved URLs from URL context
+    def retrieved_urls
+      return [] unless url_context?
+
+      url_context_metadata&.dig("urlMetadata") || []
+    end
+
+    # Get URL retrieval statuses
+    def url_retrieval_statuses
+      return [] unless url_context?
+
+      retrieved_urls.map do |url_info|
+        {
+          url: url_info["retrievedUrl"],
+          status: url_info["urlRetrievalStatus"],
+          title: url_info["title"]
+        }
+      end
+    end
     
     
     # Get token usage information

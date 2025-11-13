@@ -292,15 +292,13 @@ response = client.generate_content(
 
 if response.success?
   puts response.text
-  
+
   # Check grounding information
   if response.grounded?
     puts "\nSource references:"
-    response.grounding_chunks.each do |chunk|
-      if chunk['web']
-        puts "- #{chunk['web']['title']}"
-        puts "  #{chunk['web']['uri']}"
-      end
+    response.grounding_sources.each do |source|
+      puts "- #{source[:title]}"
+      puts "  #{source[:url]}"
     end
   end
 end
@@ -311,13 +309,15 @@ end
 ```ruby
 # Check if response is grounded
 if response.grounded?
-  # Get full grounding metadata
+  # Get formatted source information (recommended)
+  response.grounding_sources.each do |source|
+    puts "Title: #{source[:title]}"
+    puts "URL: #{source[:url]}"
+  end
+
+  # You can also access raw metadata
   metadata = response.grounding_metadata
-  
-  # Get source chunks (references)
   chunks = response.grounding_chunks
-  
-  # Get search entry point
   entry_point = response.search_entry_point
 end
 ```
@@ -343,6 +343,86 @@ You can find a grounding search demo in:
 
 ```bash
 ruby demo/grounding_search_demo_ja.rb
+```
+
+### URL Context
+
+You can use Gemini API's URL Context feature to retrieve and analyze content from web pages.
+
+#### Basic Usage
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Use URL Context to analyze web pages (shortcut)
+response = client.generate_content(
+  "Summarize the content of this page: https://www.ruby-lang.org",
+  model: "gemini-2.5-flash",
+  url_context: true
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### Using Explicit Tools Parameter
+
+```ruby
+# Explicit tools parameter
+response = client.generate_content(
+  "Compare these two pages: https://www.ruby-lang.org and https://www.python.org",
+  model: "gemini-2.5-flash",
+  tools: [{ url_context: {} }]
+)
+```
+
+#### Combining URL Context with Google Search
+
+```ruby
+# Use both URL Context and Google Search
+response = client.generate_content(
+  "What is the latest information about Ruby from https://www.ruby-lang.org and recent news?",
+  model: "gemini-2.5-flash",
+  url_context: true,
+  google_search: true
+)
+```
+
+#### Checking URL Context Metadata
+
+```ruby
+# Check if URL Context was used
+if response.url_context?
+  # Get full metadata
+  metadata = response.url_context_metadata
+
+  # Get retrieved URL information
+  urls = response.retrieved_urls
+
+  # Check retrieval status for each URL
+  response.url_retrieval_statuses.each do |url_info|
+    puts "URL: #{url_info[:url]}"
+    puts "Status: #{url_info[:status]}"
+    puts "Title: #{url_info[:title]}" if url_info[:title]
+  end
+end
+```
+
+#### Limitations
+
+- Maximum 20 URLs per request
+- Maximum 34MB content size per URL
+- YouTube videos and paywalled content are not supported
+
+#### Demo Application
+
+You can find a URL context demo in:
+
+```bash
+ruby demo/url_context_demo.rb https://www.ruby-lang.org
 ```
 
 ### Image Generation
