@@ -14,3 +14,7 @@
 
 ## [0.1.4] - 2025-11-08
 - Add support for grounding search
+
+## [0.1.5] - 2025-11-13
+- Add support for URL Context tool
+- Add simplified method for accessing grounding search sources
