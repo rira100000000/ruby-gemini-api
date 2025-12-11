@@ -27,7 +27,7 @@ module Gemini
         id: thread_id,
         created_at: created_at,
         metadata: parameters[:metadata] || {},
-        model: parameters[:model] || "gemini-2.0-flash-lite"
+        model: parameters[:model] || "gemini-2.5-flash"
       }
       
       {

@@ -41,7 +41,7 @@ begin
   puts "\nExample of getting latest information:"
   response2 = client.generate_content(
     "What are the latest tech news from Japan?",
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-2.5-flash",
     tools: [{ google_search: {} }]
   )
   

@@ -21,7 +21,7 @@ RSpec.describe Gemini::Documents do
     let(:file_name) { 'files/document-123' }
     let(:mime_type) { 'application/pdf' }
     let(:prompt) { 'Summarize this document' }
-    let(:model) { 'gemini-1.5-flash' }
+    let(:model) { 'gemini-2.5-flash' }
     let(:upload_response) { { 'file' => { 'uri' => file_uri, 'name' => file_name } } }
     let(:generate_content_response) { { 'candidates' => [{ 'content' => { 'parts' => [{ 'text' => 'Document summary' }] } }] } }
     
@@ -194,7 +194,7 @@ RSpec.describe Gemini::Documents do
     let(:mime_type) { 'application/pdf' }
     let(:system_instruction) { 'You are an expert at analyzing documents.' }
     let(:ttl) { '86400s' }
-    let(:model) { 'gemini-1.5-flash' }
+    let(:model) { 'gemini-2.5-flash' }
     let(:upload_response) { { 'file' => { 'uri' => file_uri, 'name' => file_name } } }
     let(:cache_response) { { 'name' => 'cachedContents/cache-123' } }
     
@@ -289,25 +289,25 @@ RSpec.describe Gemini::Documents do
       it 'passes the model name correctly to cached_content.create' do
         documents.cache(
           file: file, 
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.5-flash',
           mime_type: mime_type
         )
         
         # モデル名にmodels/プレフィックスが追加されることを確認
         expect(cached_content).to have_received(:create).with(
-          hash_including(model: 'models/gemini-1.5-flash')
+          hash_including(model: 'models/gemini-2.5-flash')
         )
       end
       
       it 'handles model names with models/ prefix' do
         documents.cache(
           file: file, 
-          model: 'models/gemini-1.5-flash',
+          model: 'models/gemini-2.5-flash',
           mime_type: mime_type
         )
         
         expect(cached_content).to have_received(:create).with(
-          hash_including(model: 'models/gemini-1.5-flash')
+          hash_including(model: 'models/gemini-2.5-flash')
         )
       end
     end

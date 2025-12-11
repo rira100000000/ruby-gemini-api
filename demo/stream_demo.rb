@@ -84,7 +84,7 @@ begin
   # Get streaming response as Response class return value
   response = client.generate_content_stream(
     initial_prompt,
-    model: "gemini-2.0-flash", # Model name
+    model: "gemini-2.5-flash", # Model name
     system_instruction: system_instruction
   ) do |chunk|
     # Safely extract text from chunk
@@ -169,7 +169,7 @@ begin
     begin
       # Streaming through Response class
       response = client.chat(parameters: {
-        model: "gemini-2.0-flash", # Model name
+        model: "gemini-2.5-flash", # Model name
         system_instruction: { parts: [{ text: system_instruction }] },
         contents: contents,
         stream: proc do |chunk, _raw_chunk|
@@ -193,7 +193,7 @@ begin
       # Try standard response (using Response class)
       begin
         response = client.chat(parameters: {
-          model: "gemini-2.0-flash",
+          model: "gemini-2.5-flash",
           system_instruction: { parts: [{ text: system_instruction }] },
           contents: contents
         })

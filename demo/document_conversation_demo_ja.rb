@@ -34,7 +34,7 @@ begin
   puts "==================================="
   
   puts "ドキュメントを処理中..."
-  model = "gemini-1.5-flash"
+  model = "gemini-2.5-flash"
   
   # ファイルをアップロード
   file = File.open(document_path, "rb")

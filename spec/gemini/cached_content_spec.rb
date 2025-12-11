@@ -21,11 +21,11 @@ RSpec.describe Gemini::CachedContent do
     let(:file_uri) { 'files/document-123' }
     let(:mime_type) { 'application/pdf' }
     let(:ttl) { '3600s' }
-    let(:model) { 'gemini-1.5-flash' }
+    let(:model) { 'gemini-2.5-flash' }
     let(:system_instruction) { 'You are an expert at analyzing documents.' }
     let(:file) { instance_double('File') }
     let(:upload_response) { { 'file' => { 'uri' => file_uri, 'name' => 'files/document-123' } } }
-    let(:api_response) { { 'name' => 'cachedContents/cache-123', 'model' => 'models/gemini-1.5-flash' } }
+    let(:api_response) { { 'name' => 'cachedContents/cache-123', 'model' => 'models/gemini-2.5-flash' } }
     let(:faraday_response) { instance_double('Faraday::Response', body: api_response.to_json) }
     
     context 'with file_uri provided' do
@@ -41,7 +41,7 @@ RSpec.describe Gemini::CachedContent do
           expect(req).to have_received(:params=).with(key: api_key)
           expect(req).to have_received(:body=) do |body_json|
             body = JSON.parse(body_json)
-            expect(body['model']).to eq('models/gemini-1.5-flash')
+            expect(body['model']).to eq('models/gemini-2.5-flash')
             expect(body['ttl']).to eq(ttl)
             expect(body['contents'][0]['parts'][0]['file_data']['file_uri']).to eq(file_uri)
           end
@@ -135,13 +135,13 @@ RSpec.describe Gemini::CachedContent do
           
           expect(req).to have_received(:body=) do |body_json|
             body = JSON.parse(body_json)
-            expect(body['model']).to eq('models/gemini-1.5-flash')
+            expect(body['model']).to eq('models/gemini-2.5-flash')
           end
-          
+
           faraday_response
         end
-        
-        cached_content.create(file_uri: file_uri, model: 'gemini-1.5-flash')
+
+        cached_content.create(file_uri: file_uri, model: 'gemini-2.5-flash')
       end
       
       it 'keeps models/ prefix if already present' do
@@ -155,13 +155,13 @@ RSpec.describe Gemini::CachedContent do
           
           expect(req).to have_received(:body=) do |body_json|
             body = JSON.parse(body_json)
-            expect(body['model']).to eq('models/gemini-1.5-flash')
+            expect(body['model']).to eq('models/gemini-2.5-flash')
           end
-          
+
           faraday_response
         end
-        
-        cached_content.create(file_uri: file_uri, model: 'models/gemini-1.5-flash')
+
+        cached_content.create(file_uri: file_uri, model: 'models/gemini-2.5-flash')
       end
     end
   end

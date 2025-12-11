@@ -24,7 +24,7 @@ module Gemini
       mime_type ||= file_path ? @client.determine_mime_type(file_path) : "application/octet-stream"
       
       # モデルを取得（models/プレフィックスを追加）
-      model_name = model || parameters[:model] || "gemini-1.5-flash"
+      model_name = model || parameters[:model] || "gemini-2.5-flash"
       model_name = "models/#{model_name}" unless model_name.start_with?("models/")
       
       # キャッシュリクエストを構築（キャメルケースに注意）

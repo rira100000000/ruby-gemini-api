@@ -18,3 +18,11 @@
 ## [0.1.5] - 2025-11-13
 - Add support for URL Context tool
 - Add simplified method for accessing grounding search sources
+
+## [0.1.6] - 2025-12-11
+- Add support for video understanding
+  - Analyze local video files (Files API and inline data)
+  - Analyze YouTube videos
+  - Helper methods: describe, ask, extract_timestamps, analyze_segment
+  - Support for MP4, MPEG, MOV, AVI, FLV, WebM, WMV, 3GPP formats
+- Change default model to gemini-2.5-flash 

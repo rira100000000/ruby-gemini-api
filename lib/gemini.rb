@@ -19,6 +19,7 @@ require_relative "gemini/images"
 require_relative "gemini/response"
 require_relative "gemini/documents"
 require_relative "gemini/cached_content"
+require_relative "gemini/video"
 module Gemini
   class Error < StandardError; end
   class ConfigurationError < Error; end

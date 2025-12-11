@@ -91,7 +91,7 @@ begin
           { text: "Please describe in detail what you see in this image." },
           { file_data: { mime_type: mime_type, file_uri: file_uri } }
         ],
-        model: "gemini-2.0-flash"
+        model: "gemini-2.5-flash"
       )
       
       # Confirm Response object is returned

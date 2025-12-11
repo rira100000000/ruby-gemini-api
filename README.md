@@ -11,6 +11,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Chat functionality with conversation history
 - Streaming responses for real-time text generation
 - Audio transcription capabilities
+- Video understanding (including YouTube videos)
 - Thread and message management for chat applications
 - Runs management for executing AI tasks
 - Convenient Response object for easy access to generated content
@@ -43,7 +44,7 @@ user_prompt = "Tell me the current weather in Tokyo."
 # Send request with the defined tools
 response = client.generate_content(
   user_prompt,
-  model: "gemini-1.5-flash", # Or any model that supports function calling
+  model: "gemini-2.5-flash", # Or any model that supports function calling
   tools: tools
 )
 
@@ -126,7 +127,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Generate text
 response = client.generate_content(
   "What are the main features of Ruby programming language?",
-  model: "gemini-2.0-flash-lite"
+  model: "gemini-2.5-flash"
 )
 
 # Access the generated content using Response object
@@ -147,7 +148,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Stream response in real-time
 client.generate_content_stream(
   "Tell me a story about a programmer who loves Ruby",
-  model: "gemini-2.0-flash-lite"
+  model: "gemini-2.5-flash"
 ) do |chunk|
   print chunk
   $stdout.flush
@@ -170,7 +171,7 @@ contents = [
 
 # Get response with conversation history
 response = client.chat(parameters: {
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   contents: contents
 })
 
@@ -198,7 +199,7 @@ system_instruction = "You are a Ruby programming expert who provides concise cod
 
 # Use system instructions with chat
 response = client.chat(parameters: {
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   system_instruction: { parts: [{ text: system_instruction }] },
   contents: [{ role: "user", parts: [{ text: "How do I write a simple web server in Ruby?" }] }]
 })
@@ -225,7 +226,7 @@ response = client.generate_content(
     { type: "text", text: "Describe what you see in this image" },
     { type: "image_file", image_file: { file_path: "path/to/image.jpg" } }
   ],
-  model: "gemini-2.0-flash"
+  model: "gemini-2.5-flash"
 )
 
 # Access the description using Response object
@@ -256,7 +257,7 @@ response = client.generate_content(
     { text: "Describe this image in detail" },
     { file_data: { mime_type: "image/jpeg", file_uri: file_uri } }
   ],
-  model: "gemini-2.0-flash"
+  model: "gemini-2.5-flash"
 )
 
 # Process the response using Response object
@@ -286,7 +287,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Use Google Search to get real-time information
 response = client.generate_content(
   "Who won the euro 2024?",
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   tools: [{ google_search: {} }]
 )
 
@@ -327,7 +328,7 @@ end
 ```ruby
 response = client.generate_content(
   "What are the latest AI developments in 2024?",
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   tools: [{ google_search: {} }]
 )
 
@@ -550,7 +551,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Transcribe audio file (note: file size limit is 20MB for direct upload)
 response = client.audio.transcribe(
   parameters: {
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     file: File.open("audio_file.mp3", "rb"),
     language: "en",
     content_text: "Transcribe this audio clip"
@@ -582,7 +583,7 @@ file_name = upload_result["file"]["name"]
 # Use the file ID for transcription
 response = client.audio.transcribe(
   parameters: {
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     file_uri: file_uri,
     language: "en"
   }
@@ -601,6 +602,137 @@ client.files.delete(name: file_name)
 
 For more examples, check out the `demo/file_audio_demo.rb` file included with the gem.
 
+### Video Understanding
+
+Gemini API can understand video content, enabling description, segmentation, information extraction, and question answering. It can process videos up to 2 hours long.
+
+#### Basic Usage (Upload via Files API)
+
+For video files larger than 20MB or files you want to reuse multiple times, uploading via Files API is recommended:
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Upload and analyze a video file
+result = client.video.analyze(
+  file_path: "path/to/video.mp4",
+  prompt: "Describe this video in detail"
+)
+
+response = result[:response]
+
+if response.success?
+  puts response.text
+else
+  puts "Video analysis failed: #{response.error}"
+end
+
+# File information (optional)
+puts "File URI: #{result[:file_uri]}"
+puts "File name: #{result[:file_name]}"
+```
+
+#### Analyze as Inline Data (Videos under 20MB)
+
+Small video files can be Base64-encoded and sent inline:
+
+```ruby
+# Analyze a video under 20MB inline
+response = client.video.analyze_inline(
+  file_path: "path/to/small_video.mp4",
+  prompt: "What is happening in this video?"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### YouTube Video Analysis
+
+You can directly analyze public YouTube videos (private and unlisted videos are not supported):
+
+```ruby
+# Analyze a video using YouTube URL
+response = client.video.analyze_youtube(
+  url: "https://www.youtube.com/watch?v=XXXXX",
+  prompt: "What are the three main points of this video?"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### Helper Methods
+
+Helper methods are provided for common operations:
+
+```ruby
+# Get video description
+response = client.video.describe(file_path: "video.mp4")
+puts response.text
+
+# Get YouTube video description
+response = client.video.describe(youtube_url: "https://youtube.com/...")
+puts response.text
+
+# Ask questions about a video
+response = client.video.ask(
+  file_uri: result[:file_uri],
+  question: "Who appears in this video?"
+)
+puts response.text
+
+# Extract timestamps
+response = client.video.extract_timestamps(
+  file_uri: result[:file_uri],
+  query: "important scenes"
+)
+puts response.text
+```
+
+#### Video Segment Analysis
+
+You can analyze only a portion of a video:
+
+```ruby
+# Analyze a specific segment of the video
+response = client.video.analyze_segment(
+  file_uri: result[:file_uri],
+  prompt: "What is happening in this scene?",
+  start_offset: "30s",
+  end_offset: "60s"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### Supported Video Formats
+
+- MP4 - video/mp4
+- MPEG - video/mpeg
+- MOV - video/quicktime
+- AVI - video/x-msvideo
+- FLV - video/x-flv
+- MPG - video/mpeg
+- WebM - video/webm
+- WMV - video/x-ms-wmv
+- 3GPP - video/3gpp
+
+#### Limitations
+
+- 2 million context window: up to approximately 2 hours
+- 1 million context window: up to approximately 1 hour
+- YouTube free plan: cannot process more than 8 hours of video per day
+- Approximately 300 tokens consumed per second of video (at default resolution)
+
+Demo application can be found in `demo/video_demo.rb`.
+
 ### Document Processing
 
 Gemini API can process long documents (up to 3,600 pages), including PDFs. Gemini models understand both text and images within the document, enabling you to analyze, summarize, and extract information.
@@ -614,7 +746,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 result = client.documents.process(
   file_path: "path/to/document.pdf",
   prompt: "Summarize this document in three key points",
-  model: "gemini-1.5-flash"
+  model: "gemini-2.5-flash"
 )
 
 response = result[:response]
@@ -643,7 +775,7 @@ file_path = "path/to/document.pdf"
 thread_result = client.chat_with_file(
   file_path,
   "Please provide an overview of this document",
-  model: "gemini-1.5-flash"
+  model: "gemini-2.5-flash"
 )
 
 # Get the thread ID (for continuing the conversation)
@@ -690,7 +822,7 @@ Demo applications can be found in `demo/document_chat_demo.rb` and `demo/documen
 
 Context caching allows you to preprocess and store inputs like large documents or images with the Gemini API, then reuse them across multiple requests. This saves processing time and token usage when asking different questions about the same content.
 
-**Important**: Context caching requires a minimum input of 32,768 tokens. The maximum token count matches the context window size of the model you are using. Caches automatically expire after 48 hours, but you can set a custom TTL (Time To Live).Models are only available in fixed version stable models (e.g. gemini-1.5-pro-001).The version suffix (e.g. -001 for gemini-1.5-pro-001) must be included.
+**Important**: Context caching requires a minimum input of 32,768 tokens. The maximum token count matches the context window size of the model you are using. Caches automatically expire after 48 hours, but you can set a custom TTL (Time To Live). Using stable model versions like gemini-2.5-flash is recommended.
 
 ```ruby
 require 'gemini'
@@ -702,7 +834,7 @@ cache_result = client.documents.cache(
   file_path: "path/to/large_document.pdf",
   system_instruction: "You are a document analysis expert. Please understand the content thoroughly and answer questions accurately.",
   ttl: "86400s", # 24 hours (in seconds)
-  model: "gemini-1.5-flash-001"
+  model: "gemini-2.5-flash"
 )
 
 # Get the cache name
@@ -713,7 +845,7 @@ puts "Cache name: #{cache_name}"
 response = client.generate_content_with_cache(
   "What are the key findings in this document?",
   cached_content: cache_name,
-  model: "gemini-1.5-flash-001"
+  model: "gemini-2.5-flash"
 )
 
 if response.success?
@@ -865,7 +997,7 @@ require 'gemini'
 client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 # Create a new thread
-thread = client.threads.create(parameters: { model: "gemini-2.0-flash-lite" })
+thread = client.threads.create(parameters: { model: "gemini-2.5-flash" })
 thread_id = thread["id"]
 
 # Add a message to the thread
@@ -901,7 +1033,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 response = client.generate_content(
   "Tell me about the Ruby programming language",
-  model: "gemini-2.0-flash-lite"
+  model: "gemini-2.5-flash"
 )
 
 # Basic response information
@@ -977,8 +1109,9 @@ The gem includes several demo applications that showcase its functionality:
 - `demo/demo.rb` - Basic text generation and chat
 - `demo/stream_demo.rb` - Streaming text generation
 - `demo/audio_demo.rb` - Audio transcription
+- `demo/video_demo.rb` - Video understanding (local files and YouTube)
 - `demo/vision_demo.rb` - Image recognition
-- `demo/image_generation_demo.rb` - Image generation 
+- `demo/image_generation_demo.rb` - Image generation
 - `demo/file_vision_demo.rb` - Image recognition with large image files
 - `demo/file_audio_demo.rb` - Audio transcription with large audio files
 - `demo/structured_output_demo.rb` - Structured JSON output with schema
@@ -1004,6 +1137,12 @@ ruby demo/audio_demo.rb path/to/audio/file.mp3
 
 # Audio transcription with over 20MB audio file
 ruby demo/file_audio_demo.rb path/to/audio/file.mp3
+
+# Video understanding (local file)
+ruby demo/video_demo.rb path/to/video/file.mp4
+
+# Video understanding (YouTube)
+ruby demo/video_demo.rb --youtube https://www.youtube.com/watch?v=XXXXX
 
 # Image recognition
 ruby demo/vision_demo.rb path/to/image/file.jpg
@@ -1034,10 +1173,8 @@ ruby demo/document_cache_demo.rb path/to/document.pdf
 
 The library supports various Gemini models:
 
-- `gemini-2.0-flash-lite`
-- `gemini-2.0-flash`
-- `gemini-2.0-pro`
-- `gemini-1.5-flash`
+- `gemini-2.5-flash`
+- `gemini-2.5-pro`
 
 ## Requirements
 

@@ -13,7 +13,7 @@ begin
   # Google検索を使用してリアルタイム情報を取得
   response = client.generate_content(
     "ビートルズに影響を受けた日本人アーティストを教えて。",
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-2.5-flash",
     tools: [{ google_search: {} }]
   )
   
@@ -41,7 +41,7 @@ begin
   puts "\n最新情報の取得例:"
   response2 = client.generate_content(
     "今日の日本のニュースを教えて",
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-2.5-flash",
     tools: [{ google_search: {} }]
   )
   

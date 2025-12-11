@@ -46,7 +46,7 @@ begin
   begin
     response = client.audio.transcribe(
       parameters: {
-        model: "gemini-1.5-flash", # Specify Gemini model
+        model: "gemini-2.5-flash", # Specify Gemini model
         file: file,
         language: "en", # Specify language (change as needed)
         content_text: "Please transcribe this audio."
