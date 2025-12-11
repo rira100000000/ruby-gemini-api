@@ -59,6 +59,11 @@ module Gemini
       @documents ||= Gemini::Documents.new(client: self)
     end
 
+    # 動画処理アクセサ
+    def video
+      @video ||= Gemini::Video.new(client: self)
+    end
+
     # キャッシュ管理アクセサ
     def cached_content
       @cached_content ||= Gemini::CachedContent.new(client: self)

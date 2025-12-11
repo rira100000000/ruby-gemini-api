@@ -10,6 +10,7 @@ Google のGemini API用Rubyクライアントライブラリです。このgem�
 * 会話履歴付きのチャット機能
 * リアルタイムなテキスト生成のためのストリーミングレスポンス
 * 音声文字起こし機能
+* 動画理解機能（YouTube動画対応）
 * チャットアプリケーション用のスレッドとメッセージ管理
 * AIタスク実行のためのRun管理
 * 便利なResponseオブジェクト
@@ -606,6 +607,137 @@ client.files.delete(name: file_name)
 
 より詳しい例は、gemに含まれる`demo/file_audio_demo_ja.rb`ファイルをご覧ください。
 
+### 動画理解
+
+Gemini APIは動画コンテンツを理解し、説明、セグメント化、情報抽出、質問応答などを行うことができます。最大2時間の動画を処理可能です。
+
+#### 基本的な使い方（Files APIでアップロード）
+
+20MB以上の動画ファイルや、複数回使用するファイルにはFiles APIを使用したアップロードが推奨されます：
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# 動画ファイルをアップロードして分析
+result = client.video.analyze(
+  file_path: "path/to/video.mp4",
+  prompt: "この動画の内容を詳しく説明してください"
+)
+
+response = result[:response]
+
+if response.success?
+  puts response.text
+else
+  puts "動画分析に失敗しました: #{response.error}"
+end
+
+# ファイル情報（オプション）
+puts "ファイルURI: #{result[:file_uri]}"
+puts "ファイル名: #{result[:file_name]}"
+```
+
+#### インラインデータとして分析（20MB未満の動画）
+
+小さい動画ファイルはBase64エンコードしてインラインで送信できます：
+
+```ruby
+# 20MB未満の動画をインラインで分析
+response = client.video.analyze_inline(
+  file_path: "path/to/small_video.mp4",
+  prompt: "この動画で何が起きていますか？"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### YouTube動画の分析
+
+公開されているYouTube動画を直接分析できます（非公開・限定公開動画は不可）：
+
+```ruby
+# YouTube URLを使用して動画を分析
+response = client.video.analyze_youtube(
+  url: "https://www.youtube.com/watch?v=XXXXX",
+  prompt: "この動画の主なポイントを3つ挙げてください"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### ヘルパーメソッド
+
+よく使う操作のためのヘルパーメソッドが用意されています：
+
+```ruby
+# 動画の説明を取得
+response = client.video.describe(file_path: "video.mp4")
+puts response.text
+
+# YouTube動画の説明を取得
+response = client.video.describe(youtube_url: "https://youtube.com/...")
+puts response.text
+
+# 動画に関する質問
+response = client.video.ask(
+  file_uri: result[:file_uri],
+  question: "この動画に登場する人物は誰ですか？"
+)
+puts response.text
+
+# タイムスタンプの抽出
+response = client.video.extract_timestamps(
+  file_uri: result[:file_uri],
+  query: "重要なシーン"
+)
+puts response.text
+```
+
+#### 動画のセグメント分析
+
+動画の一部分だけを分析することもできます：
+
+```ruby
+# 動画の特定区間を分析
+response = client.video.analyze_segment(
+  file_uri: result[:file_uri],
+  prompt: "このシーンで何が起きていますか？",
+  start_offset: "30s",
+  end_offset: "60s"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### サポートされる動画形式
+
+- MP4 - video/mp4
+- MPEG - video/mpeg
+- MOV - video/quicktime
+- AVI - video/x-msvideo
+- FLV - video/x-flv
+- MPG - video/mpeg
+- WebM - video/webm
+- WMV - video/x-ms-wmv
+- 3GPP - video/3gpp
+
+#### 制限事項
+
+- 200万コンテキストウィンドウ：最大約2時間
+- 100万コンテキストウィンドウ：最大約1時間
+- YouTube無料プランでは1日に8時間を超える動画は処理不可
+- 動画1秒あたり約300トークンを消費（デフォルト解像度）
+
+デモアプリケーションは `demo/video_demo_ja.rb` でご確認いただけます。
+
 ### ドキュメント処理
 
 Gemini APIは、PDFなどの長いドキュメント（最大3,600ページ）を処理することができます。ドキュメント内のテキストと画像の両方の内容を理解し、分析、要約、質問応答などを行うことができます。
@@ -982,6 +1114,7 @@ client.add_headers({"X-Custom-Header" => "value"})
 - `demo/demo_ja.rb` - 基本的なテキスト生成とチャット
 - `demo/stream_demo_ja.rb` - ストリーミングテキスト生成
 - `demo/audio_demo_ja.rb` - 音声文字起こし
+- `demo/video_demo_ja.rb` - 動画理解（ローカルファイル・YouTube対応）
 - `demo/vision_demo_ja.rb` - 画像認識
 - `demo/image_generation_demo_ja.rb` - 画像生成
 - `demo/file_vision_demo_ja.rb` - 大きな画像ファイルによる画像認識
@@ -1009,6 +1142,12 @@ ruby demo/audio_demo_ja.rb path/to/audio/file.mp3
 
 # 20MB以上の音声ファイルによる音声文字起こし
 ruby demo/file_audio_demo_ja.rb path/to/audio/file.mp3
+
+# 動画理解（ローカルファイル）
+ruby demo/video_demo_ja.rb path/to/video/file.mp4
+
+# 動画理解（YouTube）
+ruby demo/video_demo_ja.rb --youtube https://www.youtube.com/watch?v=XXXXX
 
 # 画像認識
 ruby demo/vision_demo_ja.rb path/to/image/file.jpg

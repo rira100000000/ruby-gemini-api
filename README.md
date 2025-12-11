@@ -11,6 +11,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Chat functionality with conversation history
 - Streaming responses for real-time text generation
 - Audio transcription capabilities
+- Video understanding (including YouTube videos)
 - Thread and message management for chat applications
 - Runs management for executing AI tasks
 - Convenient Response object for easy access to generated content
@@ -601,6 +602,137 @@ client.files.delete(name: file_name)
 
 For more examples, check out the `demo/file_audio_demo.rb` file included with the gem.
 
+### Video Understanding
+
+Gemini API can understand video content, enabling description, segmentation, information extraction, and question answering. It can process videos up to 2 hours long.
+
+#### Basic Usage (Upload via Files API)
+
+For video files larger than 20MB or files you want to reuse multiple times, uploading via Files API is recommended:
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Upload and analyze a video file
+result = client.video.analyze(
+  file_path: "path/to/video.mp4",
+  prompt: "Describe this video in detail"
+)
+
+response = result[:response]
+
+if response.success?
+  puts response.text
+else
+  puts "Video analysis failed: #{response.error}"
+end
+
+# File information (optional)
+puts "File URI: #{result[:file_uri]}"
+puts "File name: #{result[:file_name]}"
+```
+
+#### Analyze as Inline Data (Videos under 20MB)
+
+Small video files can be Base64-encoded and sent inline:
+
+```ruby
+# Analyze a video under 20MB inline
+response = client.video.analyze_inline(
+  file_path: "path/to/small_video.mp4",
+  prompt: "What is happening in this video?"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### YouTube Video Analysis
+
+You can directly analyze public YouTube videos (private and unlisted videos are not supported):
+
+```ruby
+# Analyze a video using YouTube URL
+response = client.video.analyze_youtube(
+  url: "https://www.youtube.com/watch?v=XXXXX",
+  prompt: "What are the three main points of this video?"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### Helper Methods
+
+Helper methods are provided for common operations:
+
+```ruby
+# Get video description
+response = client.video.describe(file_path: "video.mp4")
+puts response.text
+
+# Get YouTube video description
+response = client.video.describe(youtube_url: "https://youtube.com/...")
+puts response.text
+
+# Ask questions about a video
+response = client.video.ask(
+  file_uri: result[:file_uri],
+  question: "Who appears in this video?"
+)
+puts response.text
+
+# Extract timestamps
+response = client.video.extract_timestamps(
+  file_uri: result[:file_uri],
+  query: "important scenes"
+)
+puts response.text
+```
+
+#### Video Segment Analysis
+
+You can analyze only a portion of a video:
+
+```ruby
+# Analyze a specific segment of the video
+response = client.video.analyze_segment(
+  file_uri: result[:file_uri],
+  prompt: "What is happening in this scene?",
+  start_offset: "30s",
+  end_offset: "60s"
+)
+
+if response.success?
+  puts response.text
+end
+```
+
+#### Supported Video Formats
+
+- MP4 - video/mp4
+- MPEG - video/mpeg
+- MOV - video/quicktime
+- AVI - video/x-msvideo
+- FLV - video/x-flv
+- MPG - video/mpeg
+- WebM - video/webm
+- WMV - video/x-ms-wmv
+- 3GPP - video/3gpp
+
+#### Limitations
+
+- 2 million context window: up to approximately 2 hours
+- 1 million context window: up to approximately 1 hour
+- YouTube free plan: cannot process more than 8 hours of video per day
+- Approximately 300 tokens consumed per second of video (at default resolution)
+
+Demo application can be found in `demo/video_demo.rb`.
+
 ### Document Processing
 
 Gemini API can process long documents (up to 3,600 pages), including PDFs. Gemini models understand both text and images within the document, enabling you to analyze, summarize, and extract information.
@@ -977,8 +1109,9 @@ The gem includes several demo applications that showcase its functionality:
 - `demo/demo.rb` - Basic text generation and chat
 - `demo/stream_demo.rb` - Streaming text generation
 - `demo/audio_demo.rb` - Audio transcription
+- `demo/video_demo.rb` - Video understanding (local files and YouTube)
 - `demo/vision_demo.rb` - Image recognition
-- `demo/image_generation_demo.rb` - Image generation 
+- `demo/image_generation_demo.rb` - Image generation
 - `demo/file_vision_demo.rb` - Image recognition with large image files
 - `demo/file_audio_demo.rb` - Audio transcription with large audio files
 - `demo/structured_output_demo.rb` - Structured JSON output with schema
@@ -1004,6 +1137,12 @@ ruby demo/audio_demo.rb path/to/audio/file.mp3
 
 # Audio transcription with over 20MB audio file
 ruby demo/file_audio_demo.rb path/to/audio/file.mp3
+
+# Video understanding (local file)
+ruby demo/video_demo.rb path/to/video/file.mp4
+
+# Video understanding (YouTube)
+ruby demo/video_demo.rb --youtube https://www.youtube.com/watch?v=XXXXX
 
 # Image recognition
 ruby demo/vision_demo.rb path/to/image/file.jpg
