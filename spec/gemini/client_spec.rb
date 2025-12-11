@@ -221,7 +221,7 @@ RSpec.describe Gemini::Client do
   end
   
   describe "#chat" do
-    let(:model) { "gemini-2.5-flash-lite" }
+    let(:model) { "gemini-2.5-flash" }
     let(:response_body) do
       {
         "candidates" => [
@@ -303,7 +303,7 @@ RSpec.describe Gemini::Client do
   end
 
   describe "#generate_content_stream" do
-    let(:model) { "gemini-2.5-flash-lite" }
+    let(:model) { "gemini-2.5-flash" }
     
     before do
       allow(Gemini::Response).to receive(:new).and_return(response_instance)
@@ -416,7 +416,7 @@ RSpec.describe Gemini::Client do
     end
 
     before do
-      stub_request(:post, "#{base_url}/models/gemini-2.5-flash-lite:generateContent?key=#{api_key}")
+      stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
         .with(
           body: {
             contents: [{ parts: [{ text: prompt }] }],
