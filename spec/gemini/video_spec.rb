@@ -87,7 +87,7 @@ RSpec.describe Gemini::Video do
 
     context 'with custom model' do
       it 'uses the specified model' do
-        custom_model = "gemini-2.0-pro"
+        custom_model = "gemini-2.5-pro"
         video.analyze(file: test_video_file, prompt: "Describe", model: custom_model)
 
         expect(client).to have_received(:json_post) do |args|

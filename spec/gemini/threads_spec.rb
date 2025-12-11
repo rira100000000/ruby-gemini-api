@@ -44,10 +44,10 @@ RSpec.describe Gemini::Threads do
       it 'creates a thread with specified model' do
         allow(SecureRandom).to receive(:uuid).and_return('test-thread-id')
         
-        result = threads.create(parameters: { model: 'gemini-2.0-pro' })
-        
+        result = threads.create(parameters: { model: 'gemini-2.5-pro' })
+
         # Model info is not included in direct return value, check internal state
-        expect(threads.get_model(id: 'test-thread-id')).to eq('gemini-2.0-pro')
+        expect(threads.get_model(id: 'test-thread-id')).to eq('gemini-2.5-pro')
       end
     end
   end
@@ -105,10 +105,10 @@ RSpec.describe Gemini::Threads do
 
     context 'modifying model' do
       it 'updates thread model' do
-        threads.modify(id: 'test-thread-id', parameters: { model: 'gemini-2.0-pro' })
-        
+        threads.modify(id: 'test-thread-id', parameters: { model: 'gemini-2.5-pro' })
+
         # Check internal state with get_model
-        expect(threads.get_model(id: 'test-thread-id')).to eq('gemini-2.0-pro')
+        expect(threads.get_model(id: 'test-thread-id')).to eq('gemini-2.5-pro')
       end
     end
 
@@ -156,12 +156,12 @@ RSpec.describe Gemini::Threads do
   describe '#get_model' do
     before do
       allow(SecureRandom).to receive(:uuid).and_return('test-thread-id')
-      threads.create(parameters: { model: 'gemini-2.0-flash-lite' })
+      threads.create(parameters: { model: 'gemini-2.5-flash' })
     end
 
     context 'with existing thread' do
       it 'retrieves thread model' do
-        expect(threads.get_model(id: 'test-thread-id')).to eq('gemini-2.0-flash-lite')
+        expect(threads.get_model(id: 'test-thread-id')).to eq('gemini-2.5-flash')
       end
     end
 

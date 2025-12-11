@@ -34,7 +34,7 @@ begin
   puts "==================================="
   
   puts "Processing document..."
-  model = "gemini-1.5-flash"
+  model = "gemini-2.5-flash"
   
   # Upload file
   file = File.open(document_path, "rb")

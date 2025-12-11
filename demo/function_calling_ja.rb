@@ -17,7 +17,7 @@ user_prompt = "東京の現在の天気を教えて"
 # Gemini APIへリクエスト送信
 response = client.generate_content(
   user_prompt,
-  model: "gemini-2.0-flash",
+  model: "gemini-2.5-flash",
   tools: tools
 )
 

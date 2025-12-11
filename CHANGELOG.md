@@ -25,3 +25,4 @@
   - Analyze YouTube videos
   - Helper methods: describe, ask, extract_timestamps, analyze_segment
   - Support for MP4, MPEG, MOV, AVI, FLV, WebM, WMV, 3GPP formats
+- Change default model to gemini-2.5-flash 

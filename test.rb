@@ -32,7 +32,7 @@ begin
   
   # キャッシュリクエストを構築
   request = {
-    model: "gemini-1.5-flash-002",
+    model: "gemini-2.5-flash",
     contents: [
       {
         parts: [

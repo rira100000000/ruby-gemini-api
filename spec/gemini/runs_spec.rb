@@ -20,7 +20,7 @@ RSpec.describe Gemini::Runs do
     allow(threads).to receive(:retrieve).with(id: thread_id).and_return({ 'id' => thread_id })
     
     # Thread model retrieval method
-    allow(threads).to receive(:get_model).with(id: thread_id).and_return('gemini-2.0-flash-lite')
+    allow(threads).to receive(:get_model).with(id: thread_id).and_return('gemini-2.5-flash')
     
     # Message list retrieval mock
     allow(messages).to receive(:list).with(thread_id: thread_id).and_return({
@@ -69,7 +69,7 @@ RSpec.describe Gemini::Runs do
           'created_at' => 1234567890,
           'thread_id' => thread_id,
           'status' => 'completed',
-          'model' => 'gemini-2.0-flash-lite'
+          'model' => 'gemini-2.5-flash'
         )
         
         # Verify message was created
@@ -85,7 +85,7 @@ RSpec.describe Gemini::Runs do
 
     context 'with custom model parameter' do
       it 'creates a run with specified model' do
-        custom_model = 'gemini-1.5-flash-8b'
+        custom_model = 'gemini-2.5-flash'
         result = runs.create(thread_id: thread_id, parameters: { model: custom_model })
 
         expect(result['model']).to eq(custom_model)

@@ -5,7 +5,7 @@ module Gemini
     end
 
     # ドキュメントをアップロードして質問する基本メソッド
-    def process(file: nil, file_path: nil, prompt:, model: "gemini-1.5-flash", **parameters)
+    def process(file: nil, file_path: nil, prompt:, model: "gemini-2.5-flash", **parameters)
       # ファイルパスが指定されている場合はファイルを開く
       if file_path && !file
         file = File.open(file_path, "rb")
@@ -70,7 +70,7 @@ module Gemini
         file_name = upload_result["file"]["name"]
         
         # モデル名の取得と調整
-        model = parameters[:model] || "gemini-1.5-flash"
+        model = parameters[:model] || "gemini-2.5-flash"
         model = "models/#{model}" unless model.start_with?("models/")
         
         # キャッシュに保存（パラメータの名前に注意）

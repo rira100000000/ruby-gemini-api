@@ -64,7 +64,7 @@ begin
   # システム指示を使用して応答を生成
   response = client.generate_content(
     initial_prompt,
-    model: "gemini-2.0-flash-lite", # モデル名s
+    model: "gemini-2.5-flash", # モデル名s
     system_instruction: system_instruction,
     temperature: 0.5
   )
@@ -137,7 +137,7 @@ begin
     
     # システム指示を使用して応答を生成
     response = client.chat(parameters: {
-      model: "gemini-2.0-flash", # モデル名
+      model: "gemini-2.5-flash", # モデル名
       system_instruction: { parts: [{ text: system_instruction }] },
       contents: contents
     })

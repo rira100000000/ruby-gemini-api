@@ -84,7 +84,7 @@ begin
   # Responseクラスの戻り値としてストリーミングレスポンスを取得
   response = client.generate_content_stream(
     initial_prompt,
-    model: "gemini-2.0-flash", # モデル名
+    model: "gemini-2.5-flash", # モデル名
     system_instruction: system_instruction
   ) do |chunk|
     # チャンクからテキストを安全に抽出
@@ -169,7 +169,7 @@ begin
     begin
       # Responseクラスを介してストリーミング
       response = client.chat(parameters: {
-        model: "gemini-2.0-flash", # モデル名
+        model: "gemini-2.5-flash", # モデル名
         system_instruction: { parts: [{ text: system_instruction }] },
         contents: contents,
         stream: proc do |chunk, _raw_chunk|
@@ -193,7 +193,7 @@ begin
       # 通常のレスポンスを試す（Responseクラスを使用）
       begin
         response = client.chat(parameters: {
-          model: "gemini-2.0-flash",
+          model: "gemini-2.5-flash",
           system_instruction: { parts: [{ text: system_instruction }] },
           contents: contents
         })

@@ -91,7 +91,7 @@ begin
           { text: "この画像に写っているものを日本語で詳しく説明してください。" },
           { file_data: { mime_type: mime_type, file_uri: file_uri } }
         ],
-        model: "gemini-2.0-flash"
+        model: "gemini-2.5-flash"
       )
       
       # Responseオブジェクトが返されるのを確認

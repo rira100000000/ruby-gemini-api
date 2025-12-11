@@ -64,7 +64,7 @@ begin
   # Generate response using system instruction
   response = client.generate_content(
     initial_prompt,
-    model: "gemini-2.0-flash-lite", # Model name
+    model: "gemini-2.5-flash", # Model name
     system_instruction: system_instruction
   )
   
@@ -136,7 +136,7 @@ begin
     
     # Generate response using system instruction
     response = client.chat(parameters: {
-      model: "gemini-2.0-flash", # Model name
+      model: "gemini-2.5-flash", # Model name
       system_instruction: { parts: [{ text: system_instruction }] },
       contents: contents
     })

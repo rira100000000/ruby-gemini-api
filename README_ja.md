@@ -56,7 +56,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # テキストを生成
 response = client.generate_content(
   "Rubyプログラミング言語の主な特徴は何ですか？",
-  model: "gemini-2.0-flash-lite"
+  model: "gemini-2.5-flash"
 )
 
 # Responseオブジェクトを使用して生成されたコンテンツにアクセス
@@ -92,7 +92,7 @@ user_prompt = "東京の現在の天気を教えて"
 # 定義したツールを使ってリクエストを送信
 response = client.generate_content(
   user_prompt,
-  model: "gemini-1.5-flash", # またはFunction Callingをサポートする他のモデル
+  model: "gemini-2.5-flash", # またはFunction Callingをサポートする他のモデル
   tools: tools
 )
 
@@ -152,7 +152,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # リアルタイムでレスポンスをストリーミング
 client.generate_content_stream(
   "Rubyが大好きなプログラマーについての物語を教えてください",
-  model: "gemini-2.0-flash-lite"
+  model: "gemini-2.5-flash"
 ) do |chunk|
   print chunk
   $stdout.flush
@@ -175,7 +175,7 @@ contents = [
 
 # 会話履歴でレスポンスを取得
 response = client.chat(parameters: {
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   contents: contents
 })
 
@@ -203,7 +203,7 @@ system_instruction = "あなたは簡潔なコード例を提供するRubyプロ
 
 # チャットでシステムインストラクションを使用
 response = client.chat(parameters: {
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   system_instruction: { parts: [{ text: system_instruction }] },
   contents: [{ role: "user", parts: [{ text: "Rubyでシンプルなウェブサーバーを書くにはどうすればいいですか？" }] }]
 })
@@ -232,7 +232,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Google検索を使用してリアルタイム情報を取得
 response = client.generate_content(
   "Who won the euro 2024?",
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   tools: [{ google_search: {} }]
 )
 
@@ -273,7 +273,7 @@ end
 ```ruby
 response = client.generate_content(
   "日本の最新のテクノロジーニュースを3つ教えてください",
-  model: "gemini-2.0-flash-lite",
+  model: "gemini-2.5-flash",
   tools: [{ google_search: {} }]
 )
 
@@ -384,7 +384,7 @@ response = client.generate_content(
     { type: "text", text: "この画像に何が見えるか説明してください" },
     { type: "image_file", image_file: { file_path: "path/to/image.jpg" } }
   ],
-  model: "gemini-2.0-flash"
+  model: "gemini-2.5-flash"
 )
 
 # Responseオブジェクトを使用して説明にアクセス
@@ -415,7 +415,7 @@ response = client.generate_content(
     { text: "この画像を詳細に説明してください" },
     { file_data: { mime_type: "image/jpeg", file_uri: file_uri } }
   ],
-  model: "gemini-2.0-flash"
+  model: "gemini-2.5-flash"
 )
 
 # Responseオブジェクトを使用してレスポンスを処理
@@ -556,7 +556,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # 音声ファイルを文字起こし（注：直接アップロードの場合、ファイルサイズ制限は20MBです）
 response = client.audio.transcribe(
   parameters: {
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     file: File.open("audio_file.mp3", "rb"),
     language: "ja",
     content_text: "この音声クリップを文字起こししてください"
@@ -588,7 +588,7 @@ file_name = upload_result["file"]["name"]
 # 文字起こしにファイルIDを使用
 response = client.audio.transcribe(
   parameters: {
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     file_uri: file_uri,
     language: "ja"
   }
@@ -751,7 +751,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 result = client.documents.process(
   file_path: "path/to/document.pdf",
   prompt: "このドキュメントの主要なポイントを3つ要約してください",
-  model: "gemini-1.5-flash"
+  model: "gemini-2.5-flash"
 )
 
 response = result[:response]
@@ -780,7 +780,7 @@ file_path = "path/to/document.pdf"
 thread_result = client.chat_with_file(
   file_path,
   "このドキュメントの概要を教えてください",
-  model: "gemini-1.5-flash"
+  model: "gemini-2.5-flash"
 )
 
 # スレッドIDを取得（続きの会話に使用）
@@ -827,7 +827,7 @@ end
 
 コンテキストキャッシュを使用すると、大きなドキュメントや画像などの入力をGemini APIに事前処理させて保存し、繰り返し使用することができます。これにより、同じファイルに対して複数の質問を行う際に処理時間とトークン使用量を節約できます。
 
-**重要**: コンテキストキャッシュには最小入力トークン数が32,768必要です。最大トークン数は使用するモデルのコンテキストウィンドウサイズと同じです。キャッシュは48時間後に自動的に削除されますが、TTL（Time To Live）を設定して延長することもできます。モデルは固定バージョンの安定版モデル（gemini-1.5-pro-001 など）でのみ使用できます。バージョンの接尾辞（gemini-1.5-pro-001 の -001 など）を含める必要があります。
+**重要**: コンテキストキャッシュには最小入力トークン数が32,768必要です。最大トークン数は使用するモデルのコンテキストウィンドウサイズと同じです。キャッシュは48時間後に自動的に削除されますが、TTL（Time To Live）を設定して延長することもできます。モデルは固定バージョンの安定版モデル（gemini-2.5-flash など）を使用することが推奨されます。
 
 ```ruby
 require 'gemini'
@@ -839,7 +839,7 @@ cache_result = client.documents.cache(
   file_path: "path/to/large_document.pdf",
   system_instruction: "あなたはドキュメント分析エキスパートです。ドキュメントの内容を詳細に理解し、質問に正確に答えてください。",
   ttl: "86400s", # 24時間（秒単位）
-  model: "gemini-1.5-flash-001"
+  model: "gemini-2.5-flash"
 )
 
 # キャッシュ名を取得
@@ -850,7 +850,7 @@ puts "キャッシュ名: #{cache_name}"
 response = client.generate_content_with_cache(
   "このドキュメントの主要な発見事項は何ですか？",
   cached_content: cache_name,
-  model: "gemini-1.5-flash-001"
+  model: "gemini-2.5-flash"
 )
 
 if response.success?
@@ -1002,7 +1002,7 @@ require 'gemini'
 client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 # 新しいスレッドを作成
-thread = client.threads.create(parameters: { model: "gemini-2.0-flash-lite" })
+thread = client.threads.create(parameters: { model: "gemini-2.5-flash" })
 thread_id = thread["id"]
 
 # スレッドにメッセージを追加
@@ -1038,7 +1038,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 response = client.generate_content(
   "Rubyプログラミング言語について教えてください",
-  model: "gemini-2.0-flash-lite"
+  model: "gemini-2.5-flash"
 )
 
 # 基本的なレスポンス情報
@@ -1181,10 +1181,8 @@ ruby demo/document_cache_demo.rb path/to/document.pdf
 
 このライブラリは、様々なGeminiモデルをサポートしています：
 
-- `gemini-2.0-flash-lite`
-- `gemini-2.0-flash`
-- `gemini-2.0-pro`
-- `gemini-1.5-flash`
+- `gemini-2.5-flash`
+- `gemini-2.5-pro`
 
 ## 要件
 
