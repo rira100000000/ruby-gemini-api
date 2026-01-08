@@ -11,26 +11,30 @@ puts "=" * 60
 puts "Purpose: Verify that signatures are correctly preserved in function call parts"
 puts "=" * 60
 
-# Function definition (weather retrieval function)
-weather_function = {
+# Function definition (calculator functions)
+calculator_function = {
   function_declarations: [
     {
-      name: "get_weather",
-      description: "Get current weather information for a specified location",
+      name: "calculate",
+      description: "Perform arithmetic operations. For complex calculations, call multiple times.",
       parameters: {
         type: "object",
         properties: {
-          location: {
+          operation: {
             type: "string",
-            description: "City name (e.g., Tokyo, Osaka, Fukuoka)"
+            description: "Operation type",
+            enum: ["add", "subtract", "multiply", "divide", "power", "sqrt"]
           },
-          unit: {
-            type: "string",
-            description: "Temperature unit",
-            enum: ["celsius", "fahrenheit"]
+          a: {
+            type: "number",
+            description: "First operand"
+          },
+          b: {
+            type: "number",
+            description: "Second operand (not required for sqrt)"
           }
         },
-        required: ["location"]
+        required: ["operation", "a"]
       }
     }
   ]
@@ -39,12 +43,23 @@ weather_function = {
 # Test 1: Gemini 3 + Function Calling
 puts "\n[Test 1] Gemini 3 + Function Calling (checking signature location)"
 puts "-" * 60
+puts "【Test Purpose】"
+puts "  Verify that in Gemini 3 with function calling, Thought Signature"
+puts "  is included in the first function call part."
+puts ""
+puts "【Expected Results】"
+puts "  - Thought parts (thought: true) are included"
+puts "  - First function call part has thoughtSignature key"
+puts "  - parts_with_signatures also preserves signature in function call part"
+puts ""
+puts "【Running】Sending request with function calling to Gemini 3..."
+puts "-" * 60
 begin
   response = client.generate_content(
-    "What's the weather like in Tokyo?",
+    "I have three numbers: 123, 456, and 789. Calculate their sum, then double the result, and finally divide by 100. Tell me the final value.",
     model: "gemini-3-flash-preview",
     thinking_config: { thinking_level: "high", include_thoughts: true },
-    tools: [weather_function]
+    tools: [calculator_function]
   )
 
   puts "has_thoughts?: #{response.has_thoughts?}"
@@ -100,6 +115,17 @@ end
 # Test 2: Gemini 3 + Function Calling + Conversation (conversation history management)
 puts "\n\n[Test 2] Gemini 3 + Conversation (automatic signature preservation)"
 puts "-" * 60
+puts "【Test Purpose】"
+puts "  Verify that when using Conversation class, Thought Signature in function call part"
+puts "  is correctly saved in conversation history."
+puts ""
+puts "【Expected Results】"
+puts "  - Response contains Thought Signatures"
+puts "  - Signature is saved in function call part of conversation history"
+puts "  - Signature becomes available for next turn"
+puts ""
+puts "【Running】Asking question with Conversation class..."
+puts "-" * 60
 begin
   conversation = Gemini::Conversation.new(
     client: client,
@@ -108,10 +134,10 @@ begin
   )
 
   # First message (with function declarations)
-  puts "\n[Question 1] Tell me the weather in Tokyo"
+  puts "\n[Question 1] Compound interest calculation: Invest $10,000 at 5% for 10 years?"
   response1 = conversation.send_message(
-    "Tell me the weather in Tokyo",
-    tools: [weather_function]
+    "If I invest $10,000 at 5% annual interest for 10 years with compound interest, how much will I have in the end? Show me the calculation process.",
+    tools: [calculator_function]
   )
 
   puts "has_thoughts?: #{response1.has_thoughts?}"
@@ -152,10 +178,20 @@ end
 # Test 3: Gemini 3 without function calls
 puts "\n\n[Test 3] Gemini 3 without Function Calling"
 puts "-" * 60
-puts "Expected: Signature should be in the last part"
+puts "【Test Purpose】"
+puts "  Verify that in Gemini 3 without function calling, Thought Signature"
+puts "  is included in the last part."
+puts ""
+puts "【Expected Results】"
+puts "  - Thought parts (thought: true) are included"
+puts "  - Last part has thoughtSignature key"
+puts "  - This is Gemini 3 spec (when no function calling)"
+puts ""
+puts "【Running】Requesting without function declarations..."
+puts "-" * 60
 begin
   response = client.generate_content(
-    "What is 2 to the power of 10?",
+    "Calculate 2 to the power of 10, then explain if this number is closer to 1000 or 2000, and why.",
     model: "gemini-3-flash-preview",
     thinking_config: { thinking_level: "high", include_thoughts: true }
     # No tools

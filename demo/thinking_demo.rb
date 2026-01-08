@@ -8,9 +8,34 @@ client = Gemini::Client.new(api_key)
 puts "=" * 60
 puts "Gemini Thinking Model Demo"
 puts "=" * 60
+puts ""
+puts "【IMPORTANT NOTICE】"
+puts "  This demo does NOT use Function Calling."
+puts "  Therefore, Gemini 2.5 will NOT return any Thought Signatures."
+puts ""
+puts "  To get Thought Signatures with Gemini 2.5:"
+puts "  → See thinking_with_function_calling_demo.rb"
+puts ""
+puts "  What you can verify in this demo:"
+puts "  - Thought process text (thought_text)"
+puts "  - Presence of thoughts (has_thoughts?)"
+puts "  - Response without thoughts (text, non_thought_text)"
+puts "=" * 60
 
 # Example 1: Basic thinking mode (Gemini 2.5 - thinkingBudget)
 puts "\n[Example 1] Basic thinking mode (Gemini 2.5)"
+puts "-" * 60
+puts "【Purpose】"
+puts "  Verify basic thinking mode operation with thinking_config."
+puts "  Specifying a number (8192) treats it as thinkingBudget."
+puts ""
+puts "【Expected Results】"
+puts "  - has_thoughts? returns true"
+puts "  - thought_text retrieves the thinking process"
+puts "  - text retrieves only the final answer without thoughts"
+puts "  - thought_signatures is empty (no function calling)"
+puts ""
+puts "【Running】Solving math problem in thinking mode..."
 puts "-" * 60
 begin
   response = client.generate_content(
@@ -24,8 +49,18 @@ begin
     puts response.thought_text
     puts "\n[Final Answer]:"
     puts response.text  # Excludes thoughts by default
+    puts "\n【Result Explanation】"
+    puts "  ✓ Thinking process retrieved successfully"
+    puts "  ✓ thought_text shows internal calculation process"
+    puts "  ✓ text returns only the final answer without thoughts"
+    if response.thought_signatures.empty?
+      puts "  ✓ Thought Signatures is empty (normal for no function calling)"
+    end
   else
     puts response.text
+    puts "\n【Result Explanation】"
+    puts "  ✗ No thought parts included"
+    puts "  → thinking_config may not be set correctly"
   end
 rescue => e
   puts "Error: #{e.message}"
