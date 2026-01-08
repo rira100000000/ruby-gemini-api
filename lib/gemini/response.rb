@@ -8,13 +8,28 @@ module Gemini
     end
     
     # Get simple text response (combines multiple parts if present)
-    def text
+    # By default, excludes thought parts and returns only the final answer (user-friendly)
+    # Pass include_thoughts: true to get all text including thoughts
+    def text(include_thoughts: false)
       return nil unless valid?
-      
-      first_candidate&.dig("content", "parts")
+
+      # If no thought parts exist, return all text (maintain backward compatibility)
+      return first_candidate&.dig("content", "parts")
         &.select { |part| part.key?("text") }
         &.map { |part| part["text"] }
-        &.join("\n") || ""
+        &.join("\n") || "" unless has_thoughts?
+
+      # If thought parts exist:
+      # - include_thoughts: false → return non-thought text only (default)
+      # - include_thoughts: true → return all text including thoughts
+      if include_thoughts
+        first_candidate&.dig("content", "parts")
+          &.select { |part| part.key?("text") }
+          &.map { |part| part["text"] }
+          &.join("\n") || ""
+      else
+        non_thought_text
+      end
     end
     
     # Get formatted text (HTML/markdown, etc.)
@@ -41,15 +56,118 @@ module Gemini
     # Get image parts (if any)
     def image_parts
       return [] unless valid?
-      
+
       parts.select { |part| part.key?("inline_data") && part["inline_data"]["mime_type"].start_with?("image/") }
     end
-    
+
+    # Get thought parts (parts with thought: true)
+    def thought_parts
+      return [] unless valid?
+
+      parts.select { |part| part["thought"] == true }
+    end
+
+    # Get thought text (combines multiple thought parts if present)
+    def thought_text
+      return nil unless valid?
+
+      thought_parts
+        .select { |part| part.key?("text") }
+        .map { |part| part["text"] }
+        .join("\n") || ""
+    end
+
+    # Check if response contains thought parts
+    def has_thoughts?
+      !thought_parts.empty?
+    end
+
+    # Check if response contains thought signatures (Gemini 2.5 with Function Calling)
+    # Note: Gemini 2.5 returns thoughtSignature in functionCall parts without thought: true
+    def has_thought_signatures?
+      return false unless valid?
+
+      parts.any? { |part| part.key?("thoughtSignature") }
+    end
+
+    # Get all non-thought parts (parts with thought: false or without thought field)
+    def non_thought_parts
+      return [] unless valid?
+
+      parts.select { |part| part["thought"] != true }
+    end
+
+    # Get non-thought text (combines multiple non-thought text parts)
+    def non_thought_text
+      return nil unless valid?
+
+      non_thought_parts
+        .select { |part| part.key?("text") }
+        .map { |part| part["text"] }
+        .join("\n") || ""
+    end
+
+    # Get all thought signatures from the response
+    # Works for both Gemini 3 (with thought: true) and Gemini 2.5 (Function Calling)
+    def thought_signatures
+      return [] unless valid?
+
+      parts
+        .select { |part| part.key?("thoughtSignature") }
+        .map { |part|
+          result = { signature: part["thoughtSignature"] }
+          # Include text if available (Gemini 3 style)
+          result[:text] = part["text"] if part.key?("text")
+          # Include function call info if available (Gemini 2.5 style)
+          result[:function_call] = part["functionCall"]["name"] if part.key?("functionCall")
+          result
+        }
+    end
+
+    # Reconstruct parts with thought signatures for conversation history
+    # This method is used to prepare content for the next request in a conversation
+    def parts_with_signatures
+      return [] unless valid?
+
+      parts.map do |part|
+        if part["thought"] == true && part.key?("thoughtSignature")
+          # Thought part with signature - include all fields
+          {
+            "text" => part["text"],
+            "thought" => true,
+            "thoughtSignature" => part["thoughtSignature"]
+          }
+        elsif part.key?("text")
+          # Normal text part - text only
+          { "text" => part["text"] }
+        elsif part.key?("functionCall")
+          # Function call part - preserve function call structure
+          part
+        else
+          # Other parts - preserve as is
+          part
+        end
+      end
+    end
+
+    # Generate content object suitable for conversation history
+    # Includes thought signatures if present
+    def content_for_history
+      return nil unless valid?
+
+      {
+        "role" => role || "model",
+        "parts" => parts_with_signatures
+      }
+    end
+
     # Get all content with string representation
+    # Thought parts are prefixed with [THOUGHT] for visual identification
     def full_content
       parts.map do |part|
         if part.key?("text")
-          part["text"]
+          prefix = part["thought"] == true ? "[THOUGHT] " : ""
+          "#{prefix}#{part["text"]}"
         elsif part.key?("inline_data") && part["inline_data"]["mime_type"].start_with?("image/")
           "[IMAGE: #{part["inline_data"]["mime_type"]}]"
         else

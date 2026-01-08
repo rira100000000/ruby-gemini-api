@@ -124,7 +124,8 @@ module Gemini
         # Method with usage similar to OpenAI's chat
     def generate_content(prompt, model: "gemini-2.5-flash", system_instruction: nil,
                         response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil,
-                        url_context: false, google_search: false, **parameters, &stream_callback)
+                        url_context: false, google_search: false, thinking_config: nil,
+                        **parameters, &stream_callback)
       content = format_content(prompt)
       params = {
         contents: [content],
@@ -148,6 +149,15 @@ module Gemini
       tools = build_tools_array(tools, url_context: url_context, google_search: google_search)
       params[:tools] = tools if tools && !tools.empty?
 
+      # Handle thinking_config parameter (must be inside generationConfig for REST API)
+      if thinking_config
+        normalized_config = normalize_thinking_config(thinking_config)
+        if normalized_config
+          params[:generation_config] ||= {}
+          params[:generation_config]["thinkingConfig"] = normalized_config
+        end
+      end
+
       params.merge!(parameters)
 
       if block_given?
@@ -160,7 +170,8 @@ module Gemini
     # Streaming text generation
     def generate_content_stream(prompt, model: "gemini-2.5-flash", system_instruction: nil,
                               response_mime_type: nil, response_schema: nil, temperature: 0.5,
-                              url_context: false, google_search: false, **parameters, &block)
+                              url_context: false, google_search: false, thinking_config: nil,
+                              **parameters, &block)
       raise ArgumentError, "Block is required for streaming" unless block_given?
 
       content = format_content(prompt)
@@ -187,6 +198,15 @@ module Gemini
       # Handle tool shortcuts
       tools = build_tools_array(nil, url_context: url_context, google_search: google_search)
       params[:tools] = tools if tools && !tools.empty?
+
+      # Handle thinking_config parameter (must be inside generationConfig for REST API)
+      if thinking_config
+        normalized_config = normalize_thinking_config(thinking_config)
+        if normalized_config
+          params[:generation_config] ||= {}
+          params[:generation_config]["thinkingConfig"] = normalized_config
+        end
+      end
 
       # Merge other parameters
       params.merge!(parameters)
@@ -436,6 +456,71 @@ module Gemini
       # Remove duplicates based on tool keys and return
       return nil if result_tools.empty?
       result_tools.uniq { |tool| tool.keys.first }
+    end
+
+    # Normalize thinking_config parameter to support multiple input formats
+    # Supports:
+    # - Hash: { thinking_level: "high", include_thoughts: true } (Gemini 3)
+    # - Hash: { thinking_budget: 1024 } (Gemini 2.5)
+    # - String: "high" → { thinkingLevel: "high", includeThoughts: true }
+    # - Integer: 1024 → { thinkingBudget: 1024 }
+    # - Boolean: true → { thinkingLevel: "high", includeThoughts: true }
+    def normalize_thinking_config(config)
+      return nil unless config
+
+      # Already a hash with proper keys - convert to camelCase for API
+      if config.is_a?(Hash)
+        normalized = {}
+
+        # Convert snake_case to camelCase for API
+        if config.key?(:thinking_level) || config.key?("thinking_level")
+          level = config[:thinking_level] || config["thinking_level"]
+          normalized["thinkingLevel"] = level
+        elsif config.key?(:thinkingLevel) || config.key?("thinkingLevel")
+          normalized["thinkingLevel"] = config[:thinkingLevel] || config["thinkingLevel"]
+        end
+
+        if config.key?(:include_thoughts) || config.key?("include_thoughts")
+          include_thoughts = config[:include_thoughts] || config["include_thoughts"]
+          normalized["includeThoughts"] = include_thoughts
+        elsif config.key?(:includeThoughts) || config.key?("includeThoughts")
+          normalized["includeThoughts"] = config[:includeThoughts] || config["includeThoughts"]
+        end
+
+        if config.key?(:thinking_budget) || config.key?("thinking_budget")
+          budget = config[:thinking_budget] || config["thinking_budget"]
+          normalized["thinkingBudget"] = budget
+        elsif config.key?(:thinkingBudget) || config.key?("thinkingBudget")
+          normalized["thinkingBudget"] = config[:thinkingBudget] || config["thinkingBudget"]
+        end
+
+        return normalized unless normalized.empty?
+        return config # Return as-is if no recognized keys
+      end
+
+      # String input - assume it's thinking_level
+      if config.is_a?(String)
+        return {
+          "thinkingLevel" => config,
+          "includeThoughts" => true
+        }
+      end
+
+      # Integer input - assume it's thinking_budget (Gemini 2.5)
+      if config.is_a?(Integer)
+        return { "thinkingBudget" => config }
+      end
+
+      # Boolean input - use default high thinking level
+      if config == true
+        return {
+          "thinkingLevel" => "high",
+          "includeThoughts" => true
+        }
+      end
+
+      # Return nil for false or unrecognized types
+      nil
     end
 
     # Process stream chunk and pass to callback
