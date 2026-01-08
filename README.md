@@ -9,6 +9,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 
 - Text generation with Gemini models
 - Chat functionality with conversation history
+- **Thinking Models support (Gemini 2.5/3.0)** with automatic Thought Signature management
 - Streaming responses for real-time text generation
 - Audio transcription capabilities
 - Video understanding (including YouTube videos)
@@ -212,6 +213,170 @@ if response.safety_blocked?
   puts "Response was blocked due to safety considerations"
 end
 ```
+
+### Thinking Models and Thought Signatures
+
+Gemini 2.5 and 3.0 series models support "thinking mode" which allows models to reason through problems before responding. This library provides full support for thinking models with automatic Thought Signature management.
+
+#### Basic Thinking Mode Usage
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Enable thinking mode (simplest way)
+response = client.generate_content(
+  "Solve this problem: A store sold 45% of its inventory. If 220 items remain, how many items were there originally?",
+  model: "gemini-3-flash-preview",
+  thinking_config: true  # Enables thinking with default settings
+)
+
+# Access the thought process (optional)
+if response.has_thoughts?
+  puts "Thinking process:"
+  puts response.thought_text
+  puts "\nFinal answer:"
+end
+
+puts response.text  # Returns only the final answer (thoughts excluded by default)
+```
+
+#### Different Thinking Configuration Options
+
+```ruby
+# Gemini 3: Use thinking_level
+response = client.generate_content(
+  "Calculate the compound interest on $1000 at 5% for 3 years",
+  model: "gemini-3-flash-preview",
+  thinking_config: { thinking_level: "high", include_thoughts: true }
+)
+
+# Gemini 2.5: Use thinking_budget (with function calling)
+tools = Gemini::ToolDefinition.new do
+  function :calculate, description: "Perform calculation" do
+    property :expression, type: :string, required: true
+  end
+end
+
+response = client.generate_content(
+  "What is 123 * 456?",
+  model: "gemini-2.5-flash",
+  thinking_config: 8192,  # Shorthand for thinking_budget
+  tools: tools
+)
+
+# Shorthand options
+thinking_config: true           # → { thinking_level: "high", include_thoughts: true }
+thinking_config: "medium"       # → { thinking_level: "medium", include_thoughts: true }
+thinking_config: 4096          # → { thinking_budget: 4096 }
+```
+
+#### Conversation Class with Automatic Signature Management
+
+The `Conversation` class automatically manages Thought Signatures across multiple turns, preventing errors and maintaining reasoning context:
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Create a conversation with thinking enabled
+conversation = Gemini::Conversation.new(
+  client: client,
+  model: "gemini-3-flash-preview",
+  thinking_config: true  # Enables thinking mode
+)
+
+# First message
+response1 = conversation.send_message("What is 15 * 24?")
+puts response1.text  # Final answer only
+puts response1.thought_text if response1.has_thoughts?  # Thought process (optional)
+
+# Continue the conversation - Thought Signatures are automatically preserved
+response2 = conversation.send_message("Now divide that result by 3")
+puts response2.text
+
+# Signatures are handled automatically - no manual management needed!
+```
+
+#### Working with Thought Parts
+
+```ruby
+response = client.generate_content(
+  "Explain quantum entanglement and its implications",
+  model: "gemini-3-flash-preview",
+  thinking_config: { thinking_level: "high", include_thoughts: true }
+)
+
+# Check if response contains thoughts
+if response.has_thoughts?
+  # Get thought parts separately
+  puts "Thought parts: #{response.thought_parts.size}"
+  puts "Non-thought parts: #{response.non_thought_parts.size}"
+
+  # Get thought text (reasoning process)
+  puts "\n[Thinking]:"
+  puts response.thought_text
+
+  # Get final answer (default behavior)
+  puts "\n[Answer]:"
+  puts response.text
+
+  # Or get everything including thoughts
+  puts "\n[Full content]:"
+  puts response.text(include_thoughts: true)
+
+  # Visual representation with [THOUGHT] prefix
+  puts "\n[Full content with markers]:"
+  puts response.full_content
+end
+
+# Check for Thought Signatures (Gemini 2.5 with function calling)
+if response.has_thought_signatures?
+  puts "Signatures: #{response.thought_signatures.size}"
+end
+```
+
+#### Important Notes
+
+**Gemini 2.5 vs Gemini 3 Differences:**
+
+- **Gemini 2.5**:
+  - Requires function calling (tools parameter) to return Thought Signatures
+  - Uses `thinking_budget` parameter (numeric: 0-32768)
+  - Returns signatures without explicit `thought: true` field
+
+- **Gemini 3**:
+  - Returns thoughts with explicit `thought: true` field
+  - Uses `thinking_level` parameter (string: "low", "medium", "high", "minimal")
+  - Places signatures in specific locations (first function call part or last part)
+
+**Best Practices:**
+
+1. Use `Conversation` class for multi-turn conversations with thinking models
+2. Access `response.text` for final answers (thoughts automatically excluded)
+3. Use `response.thought_text` to inspect reasoning process
+4. Let the library handle Thought Signatures automatically
+
+#### Demo Applications
+
+Check out the thinking model demos:
+
+```bash
+# Basic thinking demo
+ruby demo/thinking_demo.rb
+
+# Thinking with function calling
+ruby demo/thinking_with_function_calling_demo.rb
+
+# Gemini 3 function calling and signature verification
+ruby demo/gemini3_function_calling_test.rb
+```
+
+For more details, see:
+- [Gemini Thinking Models Documentation](https://ai.google.dev/gemini-api/docs/thinking)
+- [Thought Signatures Documentation](https://ai.google.dev/gemini-api/docs/thought-signatures)
 
 ### Image Recognition
 
@@ -1108,6 +1273,9 @@ The gem includes several demo applications that showcase its functionality:
 
 - `demo/demo.rb` - Basic text generation and chat
 - `demo/stream_demo.rb` - Streaming text generation
+- `demo/thinking_demo.rb` / `demo/thinking_demo_ja.rb` - **Thinking models basic usage**
+- `demo/thinking_with_function_calling_demo.rb` / `demo/thinking_with_function_calling_demo_ja.rb` - **Thinking models with function calling**
+- `demo/gemini3_function_calling_test.rb` - **Gemini 3 function calling and signature verification**
 - `demo/audio_demo.rb` - Audio transcription
 - `demo/video_demo.rb` - Video understanding (local files and YouTube)
 - `demo/vision_demo.rb` - Image recognition
@@ -1123,7 +1291,7 @@ The gem includes several demo applications that showcase its functionality:
 Run the demos with:
 
 Adding _ja to the name of each demo file will launch the Japanese version of the demo.
-example: `ruby demo_ja.rb`
+example: `ruby demo/demo_ja.rb`
 
 ```bash
 # Basic chat demo
@@ -1131,6 +1299,15 @@ ruby demo/demo.rb
 
 # Streaming chat demo
 ruby demo/stream_demo.rb
+
+# Thinking models basic usage
+ruby demo/thinking_demo.rb
+
+# Thinking models with function calling
+ruby demo/thinking_with_function_calling_demo.rb
+
+# Gemini 3 function calling test
+ruby demo/gemini3_function_calling_test.rb
 
 # Audio transcription
 ruby demo/audio_demo.rb path/to/audio/file.mp3
@@ -1173,8 +1350,11 @@ ruby demo/document_cache_demo.rb path/to/document.pdf
 
 The library supports various Gemini models:
 
-- `gemini-2.5-flash`
+- `gemini-2.5-flash` (with thinking budget support)
 - `gemini-2.5-pro`
+- `gemini-3-flash-preview` (with thinking level support)
+
+For thinking models, see the [Thinking Models and Thought Signatures](#thinking-models-and-thought-signatures) section.
 
 ## Requirements
 
