@@ -425,7 +425,7 @@ RSpec.describe Gemini::Client do
           headers: { "Content-Type" => "application/json" }
         )
         .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
-      
+
       allow(Gemini::Response).to receive(:new).and_return(response_instance)
       allow(response_instance).to receive(:text).and_return("Ruby is a dynamic, interpreted language...")
     end
@@ -435,6 +435,262 @@ RSpec.describe Gemini::Client do
       expect(response).to be(response_instance)
       pp response.text
       expect(response.text).to include("Ruby is a dynamic")
+    end
+  end
+
+  # ========================================
+  # Thinking Model Tests (Gemini 2.5 / 3.0)
+  # ========================================
+
+  describe "#generate_content with thinking_config" do
+    let(:prompt) { "Solve 2+2" }
+    let(:thought_response_body) do
+      {
+        "candidates" => [
+          {
+            "content" => {
+              "parts" => [
+                { "text" => "Let me calculate...", "thought" => true },
+                { "text" => "4" }
+              ],
+              "role" => "model"
+            },
+            "finishReason" => "STOP",
+            "index" => 0
+          }
+        ]
+      }
+    end
+
+    before do
+      allow(Gemini::Response).to receive(:new).and_return(response_instance)
+      allow(response_instance).to receive(:text).and_return("4")
+    end
+
+    context "with thinking_level (Gemini 3 style)" do
+      it "sends thinkingConfig inside generationConfig" do
+        stub_request(:post, "#{base_url}/models/gemini-3-flash-preview:generateContent?key=#{api_key}")
+          .with(
+            body: {
+              contents: [{ parts: [{ text: prompt }] }],
+              generation_config: {
+                temperature: 0.5,
+                "thinkingConfig" => {
+                  "thinkingLevel" => "high",
+                  "includeThoughts" => true
+                }
+              }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .to_return(status: 200, body: thought_response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+        response = client.generate_content(
+          prompt,
+          model: "gemini-3-flash-preview",
+          thinking_config: { thinking_level: "high", include_thoughts: true }
+        )
+        expect(response).to be(response_instance)
+      end
+    end
+
+    context "with thinking_budget (Gemini 2.5 style)" do
+      it "sends thinkingConfig with thinkingBudget inside generationConfig" do
+        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+          .with(
+            body: {
+              contents: [{ parts: [{ text: prompt }] }],
+              generation_config: {
+                temperature: 0.5,
+                "thinkingConfig" => {
+                  "thinkingBudget" => 2048
+                }
+              }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .to_return(status: 200, body: thought_response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+        response = client.generate_content(
+          prompt,
+          model: "gemini-2.5-flash",
+          thinking_config: { thinking_budget: 2048 }
+        )
+        expect(response).to be(response_instance)
+      end
+    end
+
+    context "with shorthand (true)" do
+      it "converts true to thinking_level: high" do
+        stub_request(:post, "#{base_url}/models/gemini-3-flash-preview:generateContent?key=#{api_key}")
+          .with(
+            body: {
+              contents: [{ parts: [{ text: prompt }] }],
+              generation_config: {
+                temperature: 0.5,
+                "thinkingConfig" => {
+                  "thinkingLevel" => "high",
+                  "includeThoughts" => true
+                }
+              }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .to_return(status: 200, body: thought_response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+        response = client.generate_content(
+          prompt,
+          model: "gemini-3-flash-preview",
+          thinking_config: true
+        )
+        expect(response).to be(response_instance)
+      end
+    end
+
+    context "with shorthand (string)" do
+      it "converts string to thinking_level" do
+        stub_request(:post, "#{base_url}/models/gemini-3-flash-preview:generateContent?key=#{api_key}")
+          .with(
+            body: {
+              contents: [{ parts: [{ text: prompt }] }],
+              generation_config: {
+                temperature: 0.5,
+                "thinkingConfig" => {
+                  "thinkingLevel" => "medium",
+                  "includeThoughts" => true
+                }
+              }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .to_return(status: 200, body: thought_response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+        response = client.generate_content(
+          prompt,
+          model: "gemini-3-flash-preview",
+          thinking_config: "medium"
+        )
+        expect(response).to be(response_instance)
+      end
+    end
+
+    context "with shorthand (integer)" do
+      it "converts integer to thinking_budget" do
+        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+          .with(
+            body: {
+              contents: [{ parts: [{ text: prompt }] }],
+              generation_config: {
+                temperature: 0.5,
+                "thinkingConfig" => {
+                  "thinkingBudget" => 8192
+                }
+              }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .to_return(status: 200, body: thought_response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+        response = client.generate_content(
+          prompt,
+          model: "gemini-2.5-flash",
+          thinking_config: 8192
+        )
+        expect(response).to be(response_instance)
+      end
+    end
+
+    context "without thinking_config (backward compatibility)" do
+      it "sends request without thinkingConfig" do
+        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+          .with(
+            body: {
+              contents: [{ parts: [{ text: prompt }] }],
+              generation_config: { temperature: 0.5 }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+          .to_return(status: 200, body: thought_response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+        response = client.generate_content(prompt, model: "gemini-2.5-flash")
+        expect(response).to be(response_instance)
+      end
+    end
+  end
+
+  describe "#normalize_thinking_config (private method)" do
+    context "with hash input" do
+      it "converts snake_case keys to camelCase" do
+        result = client.send(:normalize_thinking_config, {
+          thinking_level: "high",
+          include_thoughts: true
+        })
+        expect(result).to eq({
+          "thinkingLevel" => "high",
+          "includeThoughts" => true
+        })
+      end
+
+      it "handles thinking_budget" do
+        result = client.send(:normalize_thinking_config, { thinking_budget: 2048 })
+        expect(result).to eq({ "thinkingBudget" => 2048 })
+      end
+
+      it "handles string keys" do
+        result = client.send(:normalize_thinking_config, {
+          "thinking_level" => "medium",
+          "include_thoughts" => false
+        })
+        expect(result).to eq({
+          "thinkingLevel" => "medium",
+          "includeThoughts" => false
+        })
+      end
+
+      it "returns hash as-is if already in API format" do
+        input = { "thinkingLevel" => "high", "includeThoughts" => true }
+        result = client.send(:normalize_thinking_config, input)
+        expect(result).to eq(input)
+      end
+    end
+
+    context "with string input" do
+      it "converts to thinkingLevel with includeThoughts" do
+        result = client.send(:normalize_thinking_config, "high")
+        expect(result).to eq({
+          "thinkingLevel" => "high",
+          "includeThoughts" => true
+        })
+      end
+    end
+
+    context "with integer input" do
+      it "converts to thinkingBudget" do
+        result = client.send(:normalize_thinking_config, 4096)
+        expect(result).to eq({ "thinkingBudget" => 4096 })
+      end
+    end
+
+    context "with boolean input" do
+      it "converts true to default high level" do
+        result = client.send(:normalize_thinking_config, true)
+        expect(result).to eq({
+          "thinkingLevel" => "high",
+          "includeThoughts" => true
+        })
+      end
+
+      it "converts false to nil" do
+        result = client.send(:normalize_thinking_config, false)
+        expect(result).to be_nil
+      end
+    end
+
+    context "with nil input" do
+      it "returns nil" do
+        result = client.send(:normalize_thinking_config, nil)
+        expect(result).to be_nil
+      end
     end
   end
 end

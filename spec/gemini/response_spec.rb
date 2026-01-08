@@ -655,4 +655,401 @@ RSpec.describe Gemini::Response do
       expect(response.search_entry_point).to be_nil
     end
   end
+
+  # ========================================
+  # Thinking Model Tests (Gemini 2.5 / 3.0)
+  # ========================================
+
+  # Mock data for thinking model tests
+  let(:gemini3_thought_response_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "Let me think about this problem...", "thought" => true },
+              { "text" => "The answer is 42." }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
+  let(:gemini3_thought_with_signature_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "Thinking process here...", "thought" => true },
+              { "text" => "Final answer", "thoughtSignature" => "encrypted_sig_xyz" }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
+  let(:gemini3_function_call_with_signature_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "I need to call a function", "thought" => true },
+              {
+                "functionCall" => {
+                  "name" => "get_weather",
+                  "args" => { "location" => "Tokyo" }
+                },
+                "thoughtSignature" => "encrypted_sig_abc"
+              }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
+  let(:gemini25_function_call_with_signature_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              {
+                "functionCall" => {
+                  "name" => "calculate",
+                  "args" => { "x" => 5 }
+                },
+                "thoughtSignature" => "gemini25_sig_def"
+              }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
+  let(:multi_thought_response_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "First thought", "thought" => true },
+              { "text" => "Second thought", "thought" => true },
+              { "text" => "Final answer" }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
+  describe '#thought_parts' do
+    it 'returns parts with thought: true' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      thought_parts = response.thought_parts
+      expect(thought_parts.size).to eq(1)
+      expect(thought_parts.first["text"]).to eq("Let me think about this problem...")
+      expect(thought_parts.first["thought"]).to be true
+    end
+
+    it 'returns multiple thought parts' do
+      response = Gemini::Response.new(multi_thought_response_data)
+      expect(response.thought_parts.size).to eq(2)
+    end
+
+    it 'returns empty array when no thought parts exist' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.thought_parts).to eq([])
+    end
+
+    it 'returns empty array for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.thought_parts).to eq([])
+    end
+  end
+
+  describe '#thought_text' do
+    it 'returns thought text from thought parts' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      expect(response.thought_text).to eq("Let me think about this problem...")
+    end
+
+    it 'concatenates multiple thought texts with newlines' do
+      response = Gemini::Response.new(multi_thought_response_data)
+      expect(response.thought_text).to eq("First thought\nSecond thought")
+    end
+
+    it 'returns empty string when no thought parts exist' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.thought_text).to eq("")
+    end
+
+    it 'returns nil for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.thought_text).to be_nil
+    end
+  end
+
+  describe '#has_thoughts?' do
+    it 'returns true when thought parts exist' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      expect(response.has_thoughts?).to be true
+    end
+
+    it 'returns false when no thought parts exist' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.has_thoughts?).to be false
+    end
+
+    it 'returns false for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.has_thoughts?).to be false
+    end
+  end
+
+  describe '#has_thought_signatures?' do
+    it 'returns true when thoughtSignature exists in any part' do
+      response = Gemini::Response.new(gemini3_thought_with_signature_data)
+      expect(response.has_thought_signatures?).to be true
+    end
+
+    it 'returns true for Gemini 2.5 function call with signature' do
+      response = Gemini::Response.new(gemini25_function_call_with_signature_data)
+      expect(response.has_thought_signatures?).to be true
+    end
+
+    it 'returns false when no signatures exist' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      expect(response.has_thought_signatures?).to be false
+    end
+
+    it 'returns false for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.has_thought_signatures?).to be false
+    end
+  end
+
+  describe '#non_thought_parts' do
+    it 'returns parts without thought: true' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      non_thought = response.non_thought_parts
+      expect(non_thought.size).to eq(1)
+      expect(non_thought.first["text"]).to eq("The answer is 42.")
+    end
+
+    it 'returns all parts when no thought parts exist' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.non_thought_parts.size).to eq(1)
+    end
+
+    it 'returns empty array for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.non_thought_parts).to eq([])
+    end
+  end
+
+  describe '#non_thought_text' do
+    it 'returns text from non-thought parts only' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      expect(response.non_thought_text).to eq("The answer is 42.")
+    end
+
+    it 'returns all text when no thought parts exist' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.non_thought_text).to eq("This is a test response.")
+    end
+
+    it 'returns empty string when only thought parts exist' do
+      only_thought_data = {
+        "candidates" => [
+          {
+            "content" => {
+              "parts" => [{ "text" => "Only thinking", "thought" => true }],
+              "role" => "model"
+            }
+          }
+        ]
+      }
+      response = Gemini::Response.new(only_thought_data)
+      expect(response.non_thought_text).to eq("")
+    end
+
+    it 'returns nil for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.non_thought_text).to be_nil
+    end
+  end
+
+  describe '#text with include_thoughts parameter' do
+    context 'when response has no thoughts' do
+      it 'returns all text (backward compatibility)' do
+        response = Gemini::Response.new(basic_response_data)
+        expect(response.text).to eq("This is a test response.")
+        expect(response.text(include_thoughts: true)).to eq("This is a test response.")
+      end
+    end
+
+    context 'when response has thoughts' do
+      it 'excludes thought text by default' do
+        response = Gemini::Response.new(gemini3_thought_response_data)
+        expect(response.text).to eq("The answer is 42.")
+      end
+
+      it 'includes thought text when include_thoughts: true' do
+        response = Gemini::Response.new(gemini3_thought_response_data)
+        expect(response.text(include_thoughts: true)).to eq("Let me think about this problem...\nThe answer is 42.")
+      end
+
+      it 'handles multiple thought parts correctly' do
+        response = Gemini::Response.new(multi_thought_response_data)
+        expect(response.text).to eq("Final answer")
+        expect(response.text(include_thoughts: true)).to eq("First thought\nSecond thought\nFinal answer")
+      end
+    end
+  end
+
+  describe '#thought_signatures' do
+    it 'extracts signatures from text parts' do
+      response = Gemini::Response.new(gemini3_thought_with_signature_data)
+      sigs = response.thought_signatures
+      expect(sigs.size).to eq(1)
+      expect(sigs.first[:signature]).to eq("encrypted_sig_xyz")
+      expect(sigs.first[:text]).to eq("Final answer")
+    end
+
+    it 'extracts signatures from function call parts (Gemini 3)' do
+      response = Gemini::Response.new(gemini3_function_call_with_signature_data)
+      sigs = response.thought_signatures
+      expect(sigs.size).to eq(1)
+      expect(sigs.first[:signature]).to eq("encrypted_sig_abc")
+      expect(sigs.first[:function_call]).to eq("get_weather")
+    end
+
+    it 'extracts signatures from function call parts (Gemini 2.5)' do
+      response = Gemini::Response.new(gemini25_function_call_with_signature_data)
+      sigs = response.thought_signatures
+      expect(sigs.size).to eq(1)
+      expect(sigs.first[:signature]).to eq("gemini25_sig_def")
+      expect(sigs.first[:function_call]).to eq("calculate")
+    end
+
+    it 'returns empty array when no signatures exist' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      expect(response.thought_signatures).to eq([])
+    end
+
+    it 'returns empty array for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.thought_signatures).to eq([])
+    end
+  end
+
+  describe '#parts_with_signatures' do
+    it 'preserves thought parts with signatures' do
+      response = Gemini::Response.new(gemini3_thought_with_signature_data)
+      preserved = response.parts_with_signatures
+      # First part: thought without signature -> converted to text only
+      expect(preserved[0]).to eq({ "text" => "Thinking process here..." })
+      # Second part: text with signature -> preserved
+      expect(preserved[1]).to eq({ "text" => "Final answer" })
+    end
+
+    it 'preserves function call parts with signatures (Gemini 3)' do
+      response = Gemini::Response.new(gemini3_function_call_with_signature_data)
+      preserved = response.parts_with_signatures
+      # Function call part should be preserved entirely
+      fc_part = preserved.find { |p| p.key?("functionCall") }
+      expect(fc_part).not_to be_nil
+      expect(fc_part["thoughtSignature"]).to eq("encrypted_sig_abc")
+      expect(fc_part["functionCall"]["name"]).to eq("get_weather")
+    end
+
+    it 'preserves function call parts with signatures (Gemini 2.5)' do
+      response = Gemini::Response.new(gemini25_function_call_with_signature_data)
+      preserved = response.parts_with_signatures
+      fc_part = preserved.find { |p| p.key?("functionCall") }
+      expect(fc_part["thoughtSignature"]).to eq("gemini25_sig_def")
+    end
+
+    it 'converts thought parts without signatures to text only' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      preserved = response.parts_with_signatures
+      # Thought part without signature should become regular text
+      expect(preserved[0]).to eq({ "text" => "Let me think about this problem..." })
+      expect(preserved[0]["thought"]).to be_nil
+    end
+
+    it 'returns empty array for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.parts_with_signatures).to eq([])
+    end
+  end
+
+  describe '#content_for_history' do
+    it 'generates proper content structure for conversation history' do
+      response = Gemini::Response.new(gemini3_thought_with_signature_data)
+      content = response.content_for_history
+      expect(content).to have_key("role")
+      expect(content).to have_key("parts")
+      expect(content["role"]).to eq("model")
+      expect(content["parts"]).to be_an(Array)
+    end
+
+    it 'includes thought signatures in history content' do
+      response = Gemini::Response.new(gemini3_function_call_with_signature_data)
+      content = response.content_for_history
+      fc_part = content["parts"].find { |p| p.key?("functionCall") }
+      expect(fc_part["thoughtSignature"]).to eq("encrypted_sig_abc")
+    end
+
+    it 'returns nil for invalid responses' do
+      response = Gemini::Response.new(error_response_data)
+      expect(response.content_for_history).to be_nil
+    end
+  end
+
+  describe '#full_content with thought parts' do
+    it 'prefixes thought parts with [THOUGHT]' do
+      response = Gemini::Response.new(gemini3_thought_response_data)
+      content = response.full_content
+      expect(content).to include("[THOUGHT] Let me think about this problem...")
+      expect(content).to include("The answer is 42.")
+    end
+
+    it 'handles multiple thought parts' do
+      response = Gemini::Response.new(multi_thought_response_data)
+      content = response.full_content
+      expect(content).to include("[THOUGHT] First thought")
+      expect(content).to include("[THOUGHT] Second thought")
+      expect(content).to include("Final answer")
+      expect(content).not_to include("[THOUGHT] Final answer")
+    end
+
+    it 'does not prefix non-thought parts' do
+      response = Gemini::Response.new(basic_response_data)
+      content = response.full_content
+      expect(content).not_to include("[THOUGHT]")
+      expect(content).to eq("This is a test response.")
+    end
+  end
 end

@@ -109,6 +109,12 @@ module Gemini
 
     # Get all thought signatures from the response
     # Works for both Gemini 3 (with thought: true) and Gemini 2.5 (Function Calling)
+    #
+    # Thought Signature Behavior:
+    # - Gemini 3 with function calls: Signature in first function call part (MUST be returned)
+    # - Gemini 3 without function calls: Signature in last part (if thinking generated)
+    # - Gemini 2.5 with function calls: Signature in first part regardless of type (optional to return)
+    # - Gemini 2.5 without function calls: No signatures in any part
     def thought_signatures
       return [] unless valid?
 
@@ -126,6 +132,19 @@ module Gemini
 
     # Reconstruct parts with thought signatures for conversation history
     # This method is used to prepare content for the next request in a conversation
+    #
+    # Signature Preservation Rules:
+    # - Gemini 3: MUST preserve function call parts with signatures (first function call part)
+    # - Gemini 2.5: Preserving signature in first part is optional, but recommended
+    # - Thought parts with signatures: Preserved with thought: true and signature
+    # - Thought parts without signatures: Converted to regular text (thought: true stripped)
+    # - Function call parts: Always preserved entirely (including any thoughtSignature)
+    # - Regular text parts: Text content only
+    #
+    # This ensures that:
+    # 1. Gemini 3's required function call signatures are maintained
+    # 2. Gemini 2.5's optional signatures are maintained
+    # 3. Conversation context is preserved correctly without 400 errors
     def parts_with_signatures
       return [] unless valid?
 
@@ -138,10 +157,11 @@ module Gemini
             "thoughtSignature" => part["thoughtSignature"]
           }
         elsif part.key?("text")
-          # Normal text part - text only
+          # Normal text part (or thought part without signature) - text only
           { "text" => part["text"] }
         elsif part.key?("functionCall")
-          # Function call part - preserve function call structure
+          # Function call part - preserve entire structure (including thoughtSignature if present)
+          # CRITICAL for Gemini 3: First function call part MUST include signature
           part
         else
           # Other parts - preserve as is
