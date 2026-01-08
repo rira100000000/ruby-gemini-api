@@ -1,32 +1,32 @@
 require 'bundler/setup'
 require 'gemini'
 
-# APIキーを環境変数から取得
-api_key = ENV['GEMINI_API_KEY'] || raise("環境変数 GEMINI_API_KEY を設定してください")
+# Get API key from environment variable
+api_key = ENV['GEMINI_API_KEY'] || raise("Please set the GEMINI_API_KEY environment variable")
 client = Gemini::Client.new(api_key)
 
 puts "=" * 60
-puts "Gemini 3 + Function Calling + Thought Signatures テスト"
+puts "Gemini 3 + Function Calling + Thought Signatures Test"
 puts "=" * 60
-puts "目的: 関数呼び出し部分にシグネチャが正しく保持されるか確認"
+puts "Purpose: Verify that signatures are correctly preserved in function call parts"
 puts "=" * 60
 
-# 関数定義（天気を取得する関数）
+# Function definition (weather retrieval function)
 weather_function = {
   function_declarations: [
     {
       name: "get_weather",
-      description: "指定された場所の現在の天気情報を取得します",
+      description: "Get current weather information for a specified location",
       parameters: {
         type: "object",
         properties: {
           location: {
             type: "string",
-            description: "都市名（例：東京、大阪、福岡）"
+            description: "City name (e.g., Tokyo, Osaka, Fukuoka)"
           },
           unit: {
             type: "string",
-            description: "温度の単位",
+            description: "Temperature unit",
             enum: ["celsius", "fahrenheit"]
           }
         },
@@ -36,12 +36,12 @@ weather_function = {
   ]
 }
 
-# テスト1: Gemini 3 + Function Calling
-puts "\n【テスト1】Gemini 3 + Function Calling（シグネチャの場所を確認）"
+# Test 1: Gemini 3 + Function Calling
+puts "\n[Test 1] Gemini 3 + Function Calling (checking signature location)"
 puts "-" * 60
 begin
   response = client.generate_content(
-    "東京の天気はどうですか？",
+    "What's the weather like in Tokyo?",
     model: "gemini-3-flash-preview",
     thinking_config: { thinking_level: "high", include_thoughts: true },
     tools: [weather_function]
@@ -51,54 +51,54 @@ begin
   puts "has_thought_signatures?: #{response.has_thought_signatures?}"
   puts "thought_signatures count: #{response.thought_signatures.size}"
 
-  puts "\n[全Partsの詳細]:"
+  puts "\n[All Parts Details]:"
   response.parts.each_with_index do |part, i|
     puts "  Part #{i + 1}:"
     puts "    Keys: #{part.keys.inspect}"
     puts "    thought: #{part['thought']}" if part.key?('thought')
-    puts "    thoughtSignature: #{part['thoughtSignature'] ? '存在' : 'なし'}"
+    puts "    thoughtSignature: #{part['thoughtSignature'] ? 'present' : 'none'}"
     puts "    functionCall: #{part['functionCall']['name']}" if part.key?('functionCall')
     puts "    text preview: #{part['text'][0..50]}..." if part.key?('text') && part['text']
   end
 
-  puts "\n[parts_with_signatures（会話履歴用）]:"
+  puts "\n[parts_with_signatures (for conversation history)]:"
   response.parts_with_signatures.each_with_index do |part, i|
     puts "  Part #{i + 1}:"
     puts "    Keys: #{part.keys.inspect}"
     puts "    thought: #{part['thought']}" if part.key?('thought')
-    puts "    thoughtSignature: #{part['thoughtSignature'] ? '存在' : 'なし'}"
+    puts "    thoughtSignature: #{part['thoughtSignature'] ? 'present' : 'none'}"
     puts "    functionCall: #{part['functionCall']['name']}" if part.key?('functionCall')
   end
 
-  puts "\n[検証結果]:"
-  # 最初の関数呼び出し部分にシグネチャがあるか確認
+  puts "\n[Verification Results]:"
+  # Check if the first function call part has a signature
   first_fc_part = response.parts.find { |p| p.key?('functionCall') }
   if first_fc_part
-    puts "  ✓ 関数呼び出しpartが見つかりました"
+    puts "  ✓ Function call part found"
     if first_fc_part.key?('thoughtSignature')
-      puts "  ✓ 最初の関数呼び出し部分にシグネチャが含まれています（Gemini 3の仕様通り）"
+      puts "  ✓ First function call part contains signature (as per Gemini 3 spec)"
     else
-      puts "  ✗ 最初の関数呼び出し部分にシグネチャがありません"
+      puts "  ✗ First function call part has no signature"
     end
 
-    # parts_with_signaturesでも保持されているか確認
+    # Check if it's preserved in parts_with_signatures
     fc_in_preserved = response.parts_with_signatures.find { |p| p.key?('functionCall') }
     if fc_in_preserved && fc_in_preserved.key?('thoughtSignature')
-      puts "  ✓ parts_with_signaturesでもシグネチャが保持されています"
+      puts "  ✓ Signature is preserved in parts_with_signatures"
     elsif fc_in_preserved
-      puts "  ✗ parts_with_signaturesでシグネチャが失われています"
+      puts "  ✗ Signature is lost in parts_with_signatures"
     end
   else
-    puts "  ✗ 関数呼び出しpartが見つかりません"
+    puts "  ✗ Function call part not found"
   end
 
 rescue => e
-  puts "エラー: #{e.message}"
+  puts "Error: #{e.message}"
   puts e.backtrace.first(5)
 end
 
-# テスト2: Gemini 3 + Function Calling + Conversation（会話履歴管理）
-puts "\n\n【テスト2】Gemini 3 + Conversation（シグネチャの自動保持）"
+# Test 2: Gemini 3 + Function Calling + Conversation (conversation history management)
+puts "\n\n[Test 2] Gemini 3 + Conversation (automatic signature preservation)"
 puts "-" * 60
 begin
   conversation = Gemini::Conversation.new(
@@ -107,10 +107,10 @@ begin
     thinking_config: { thinking_level: "high", include_thoughts: true }
   )
 
-  # 最初のメッセージ（関数宣言を含む）
-  puts "\n[質問1] 東京の天気を教えて"
+  # First message (with function declarations)
+  puts "\n[Question 1] Tell me the weather in Tokyo"
   response1 = conversation.send_message(
-    "東京の天気を教えてください",
+    "Tell me the weather in Tokyo",
     tools: [weather_function]
   )
 
@@ -118,74 +118,74 @@ begin
   puts "has_thought_signatures?: #{response1.has_thought_signatures?}"
 
   if response1.function_calls.any?
-    puts "関数呼び出し: #{response1.function_calls.map { |fc| fc['name'] }.join(', ')}"
+    puts "Function calls: #{response1.function_calls.map { |fc| fc['name'] }.join(', ')}"
   end
 
-  puts "\n[会話履歴の確認]:"
+  puts "\n[Checking Conversation History]:"
   history = conversation.get_history
-  puts "  履歴件数: #{history.size}"
+  puts "  History count: #{history.size}"
 
   if history.size > 1
-    model_response = history[1]  # モデルのレスポンス
-    puts "  モデルレスポンスのparts数: #{model_response['parts'].size}"
+    model_response = history[1]  # Model's response
+    puts "  Model response parts count: #{model_response['parts'].size}"
 
-    # 関数呼び出し部分を探す
+    # Find the function call part
     fc_part = model_response['parts'].find { |p| p.key?('functionCall') }
     if fc_part
-      puts "  ✓ 履歴に関数呼び出しpartが保存されています"
+      puts "  ✓ Function call part saved in history"
       if fc_part.key?('thoughtSignature')
-        puts "  ✓ 関数呼び出しpartにシグネチャが保持されています"
-        puts "    シグネチャ（先頭50文字）: #{fc_part['thoughtSignature'][0..50]}..."
+        puts "  ✓ Signature preserved in function call part"
+        puts "    Signature (first 50 chars): #{fc_part['thoughtSignature'][0..50]}..."
       else
-        puts "  ✗ 関数呼び出しpartにシグネチャがありません"
+        puts "  ✗ Function call part has no signature"
       end
     else
-      puts "  ✗ 履歴に関数呼び出しpartが見つかりません"
+      puts "  ✗ Function call part not found in history"
     end
   end
 
 rescue => e
-  puts "エラー: #{e.message}"
+  puts "Error: #{e.message}"
   puts e.backtrace.first(5)
 end
 
-# テスト3: Gemini 3 without function calls（関数呼び出しなし）
-puts "\n\n【テスト3】Gemini 3 without Function Calling（関数呼び出しなし）"
+# Test 3: Gemini 3 without function calls
+puts "\n\n[Test 3] Gemini 3 without Function Calling"
 puts "-" * 60
-puts "期待: 最後のpartにシグネチャが含まれる"
+puts "Expected: Signature should be in the last part"
 begin
   response = client.generate_content(
-    "2の10乗はいくつですか？",
+    "What is 2 to the power of 10?",
     model: "gemini-3-flash-preview",
     thinking_config: { thinking_level: "high", include_thoughts: true }
-    # tools なし
+    # No tools
   )
 
   puts "has_thoughts?: #{response.has_thoughts?}"
   puts "has_thought_signatures?: #{response.has_thought_signatures?}"
 
-  puts "\n[全Partsの詳細]:"
+  puts "\n[All Parts Details]:"
   response.parts.each_with_index do |part, i|
     puts "  Part #{i + 1}:"
     puts "    Keys: #{part.keys.inspect}"
     puts "    thought: #{part['thought']}" if part.key?('thought')
-    puts "    thoughtSignature: #{part['thoughtSignature'] ? '存在' : 'なし'}"
+    puts "    thoughtSignature: #{part['thoughtSignature'] ? 'present' : 'none'}"
     puts "    text preview: #{part['text'][0..50]}..." if part.key?('text') && part['text']
   end
 
-  puts "\n[検証結果]:"
+  puts "\n[Verification Results]:"
   last_part = response.parts.last
   if last_part && last_part.key?('thoughtSignature')
-    puts "  ✓ 最後のpartにシグネチャが含まれています（Gemini 3の仕様通り）"
+    puts "  ✓ Last part contains signature (as per Gemini 3 spec)"
   else
-    puts "  ✗ 最後のpartにシグネチャがありません"
+    puts "  ✗ Last part has no signature"
   end
 
 rescue => e
-  puts "エラー: #{e.message}"
+  puts "Error: #{e.message}"
   puts e.backtrace.first(5)
 end
 
 puts "\n" + "=" * 60
-puts "テスト完了"
+puts "Test completed"
 puts "=" * 60
