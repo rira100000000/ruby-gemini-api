@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ruby-gemini-api (0.1.6)
+    ruby-gemini-api (0.1.7)
       faraday (~> 2.0)
       faraday-multipart (~> 1.0)
       json (~> 2.0)
@@ -99,4 +99,4 @@ DEPENDENCIES
   webmock (~> 3.0)
 
 BUNDLED WITH
-   2.5.17
+   2.4.21
