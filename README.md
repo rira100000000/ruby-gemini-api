@@ -1,9 +1,21 @@
 [README ‐ 日本語](https://github.com/rira100000000/ruby-gemini-api/blob/main/README_ja.md)
 # Ruby-Gemini-API
 
+[![Gem Version](https://badge.fury.io/rb/ruby-gemini-api.svg)](https://badge.fury.io/rb/ruby-gemini-api)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Ruby client library for Google's Gemini API. This gem provides a simple, intuitive interface for interacting with Gemini's generative AI capabilities, following patterns similar to other AI client libraries.
 
 This project is inspired by and pays homage to [ruby-openai](https://github.com/alexrudall/ruby-openai), aiming to provide a familiar and consistent experience for Ruby developers working with Gemini's AI models.
+
+## Why This Gem?
+
+- **Familiar Interface**: API design inspired by ruby-openai for a smooth transition
+- **Comprehensive Features**: Text generation, vision, audio, video, function calling, and more
+- **Response Object**: Convenient wrapper for easy access to generated content
+- **Streaming Support**: Real-time text generation with block-based API
+- **Thinking Support**: Built-in support for Gemini 2.5/3 thinking features
+- **Production Ready**: Stable 1.0 release with thorough documentation
 
 ## Features
 

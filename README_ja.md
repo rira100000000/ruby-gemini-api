@@ -1,8 +1,20 @@
 # Ruby-Gemini-API
 
+[![Gem Version](https://badge.fury.io/rb/ruby-gemini-api.svg)](https://badge.fury.io/rb/ruby-gemini-api)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Google のGemini API用Rubyクライアントライブラリです。このgemは、Geminiの生成AI機能と対話するためのシンプルで直感的なインターフェースを提供し、他のAIクライアントライブラリと同様のパターンに従っています。
 
 このプロジェクトは[ruby-openai](https://github.com/alexrudall/ruby-openai)にインスパイアされており、GeminiのAIモデルを扱うRuby開発者に親しみやすく一貫性のある体験を提供することを目指しています。
+
+## なぜこのGem？
+
+- **馴染みやすいインターフェース**: ruby-openaiにインスパイアされたAPI設計でスムーズな移行が可能
+- **豊富な機能**: テキスト生成、画像認識、音声、動画、Function Callingなど
+- **Responseオブジェクト**: 生成されたコンテンツに簡単にアクセスできる便利なラッパー
+- **ストリーミング対応**: ブロックベースのAPIでリアルタイムなテキスト生成
+- **Thinking対応**: Gemini 2.5/3のThinking機能をビルトインでサポート
+- **本番環境対応**: 充実したドキュメントを備えた安定版1.0リリース
 
 ## 機能
 
