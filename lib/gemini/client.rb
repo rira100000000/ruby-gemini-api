@@ -1,9 +1,10 @@
 module Gemini
   class Client
     include Gemini::HTTP
-    
+
     SENSITIVE_ATTRIBUTES = %i[@api_key @extra_headers].freeze
     CONFIG_KEYS = %i[api_key uri_base extra_headers log_errors request_timeout].freeze
+    VALID_THINKING_LEVELS = %w[minimal low medium high].freeze
     
     attr_reader(*CONFIG_KEYS, :faraday_middleware)
     attr_writer :api_key
@@ -83,7 +84,18 @@ module Gemini
     # Extended to support streaming callbacks
     def chat(parameters: {}, &stream_callback)
       model = parameters.delete(:model) || "gemini-2.5-flash"
-      
+
+      # thinking_budget / thinking_level をパラメータから抽出
+      thinking_budget = parameters.delete(:thinking_budget)
+      thinking_level = parameters.delete(:thinking_level)
+
+      # Thinking設定
+      thinking_config = build_thinking_config(thinking_budget, thinking_level)
+      if thinking_config
+        parameters[:generationConfig] ||= {}
+        parameters[:generationConfig][:thinkingConfig] = thinking_config
+      end
+
       # If streaming callback is provided
       if block_given?
         path = "models/#{model}:streamGenerateContent"
@@ -121,10 +133,12 @@ module Gemini
     
     # Helper methods for convenience
     
-        # Method with usage similar to OpenAI's chat
+    # Method with usage similar to OpenAI's chat
     def generate_content(prompt, model: "gemini-2.5-flash", system_instruction: nil,
                         response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil,
-                        url_context: false, google_search: false, **parameters, &stream_callback)
+                        url_context: false, google_search: false,
+                        thinking_budget: nil, thinking_level: nil,
+                        **parameters, &stream_callback)
       content = format_content(prompt)
       params = {
         contents: [content],
@@ -142,6 +156,12 @@ module Gemini
 
       if response_schema
         params[:generation_config]["response_schema"] = response_schema
+      end
+
+      # Thinking設定を追加
+      thinking_config = build_thinking_config(thinking_budget, thinking_level)
+      if thinking_config
+        params[:generation_config][:thinkingConfig] = thinking_config
       end
 
       # Handle tool shortcuts
@@ -415,6 +435,39 @@ module Gemini
     end
     
     private
+
+    # Build thinking config from budget and level options
+    def build_thinking_config(budget, level)
+      return nil unless budget || level
+
+      config = {}
+
+      if budget
+        validate_thinking_budget!(budget)
+        config[:thinkingBudget] = budget
+      end
+
+      if level
+        level_str = level.to_s
+        validate_thinking_level!(level_str)
+        config[:thinkingLevel] = level_str
+      end
+
+      config
+    end
+
+    def validate_thinking_budget!(budget)
+      return if budget == -1 || budget == 0
+      unless budget.is_a?(Integer) && budget > 0 && budget <= 32768
+        raise ArgumentError, "thinking_budget must be -1, 0, or 1-32768"
+      end
+    end
+
+    def validate_thinking_level!(level)
+      unless VALID_THINKING_LEVELS.include?(level)
+        raise ArgumentError, "thinking_level must be one of: #{VALID_THINKING_LEVELS.join(', ')}"
+      end
+    end
 
     # Build tools array from explicit tools parameter and shortcuts
     def build_tools_array(tools, url_context: false, google_search: false)

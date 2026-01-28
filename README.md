@@ -94,6 +94,105 @@ puts "After deleting a function: #{all_tools.list_functions}"
 # => After deleting a function: [:get_current_weather, :send_email]
 ```
 
+### Thinking Feature
+
+Gemini 2.5 and later models support the Thinking feature, which enables the model to perform internal reasoning processes for complex problems to generate higher-quality answers.
+
+#### Using with Gemini 2.5: `thinking_budget`
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+# Specify thinking token count (1-32768)
+response = client.generate_content(
+  "Solve this complex math problem step by step",
+  model: "gemini-2.5-flash",
+  thinking_budget: 2048
+)
+
+puts "Thoughts token count: #{response.thoughts_token_count}"
+puts "Answer: #{response.text}"
+
+# Dynamic thinking (model decides automatically)
+response = client.generate_content(
+  "A difficult logic puzzle",
+  model: "gemini-2.5-flash",
+  thinking_budget: -1
+)
+
+# Disable thinking
+response = client.generate_content(
+  "Simple question",
+  thinking_budget: 0
+)
+```
+
+#### Using with Gemini 3: `thinking_level`
+
+```ruby
+# Specify thinking level (:minimal, :low, :medium, :high)
+response = client.generate_content(
+  "Complex analysis task",
+  model: "gemini-3-flash-preview",
+  thinking_level: :high
+)
+```
+
+#### Function Calling with Thinking (Thought Signatures)
+
+When using Function Calling with Gemini 3, Thought Signatures must be managed. The library automatically handles signatures for you.
+
+```ruby
+# Initial request
+response = client.generate_content(
+  "What's the weather in Tokyo?",
+  tools: tools,
+  thinking_level: :medium
+)
+
+# If function calls are present
+if response.function_calls.any?
+  # Execute the function
+  weather_data = get_weather("Tokyo")
+
+  # Build continuation request (with automatic signature attachment)
+  contents = Gemini::FunctionCallingHelper.build_continuation(
+    original_contents: [{ role: "user", parts: [{ text: "What's the weather in Tokyo?" }] }],
+    model_response: response,
+    function_responses: [
+      { name: "get_weather", response: weather_data }
+    ]
+  )
+
+  # Continuation request
+  final_response = client.generate_content(
+    contents,
+    tools: tools,
+    thinking_level: :medium
+  )
+
+  puts final_response.text
+end
+```
+
+#### Response Methods for Thinking
+
+```ruby
+# Get thoughts token count
+response.thoughts_token_count  # => 150
+
+# Get thought signatures (for Function Calling)
+response.thought_signatures    # => ["base64encoded..."]
+response.first_thought_signature
+response.has_thought_signature?
+
+# Check model version
+response.model_version  # => "gemini-3-flash-preview"
+response.gemini_3?      # => true
+```
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -1116,6 +1215,8 @@ The gem includes several demo applications that showcase its functionality:
 - `demo/file_audio_demo.rb` - Audio transcription with large audio files
 - `demo/structured_output_demo.rb` - Structured JSON output with schema
 - `demo/enum_response_demo.rb` - Enum-constrained responses
+- `demo/thinking_demo.rb` - Thinking feature (Gemini 2.5)
+- `demo/thinking_gemini3_demo.rb` - Thinking feature (Gemini 3)
 - `demo/document_chat_demo.rb` - Document processing
 - `demo/document_conversation_demo.rb` - Conversation with documents
 - `demo/document_cache_demo.rb` - Document caching
@@ -1158,6 +1259,12 @@ ruby demo/structured_output_demo.rb
 
 # Enum-constrained responses
 ruby demo/enum_response_demo.rb
+
+# Thinking feature (Gemini 2.5)
+ruby demo/thinking_demo.rb
+
+# Thinking feature (Gemini 3)
+ruby demo/thinking_gemini3_demo.rb
 
 # Document processing
 ruby demo/document_chat_demo.rb path/to/document.pdf
