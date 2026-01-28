@@ -223,7 +223,52 @@ module Gemini
     def safety_ratings
       first_candidate&.dig("safetyRatings") || []
     end
-    
+
+    # Thinking関連メソッド
+
+    # 思考トークン数を取得
+    def thoughts_token_count
+      @raw_data.dig('usageMetadata', 'thoughtsTokenCount')
+    end
+
+    # Thought Signatureを取得（配列）
+    def thought_signatures
+      parts.filter_map { |p| p['thoughtSignature'] }
+    end
+
+    # 最初のThought Signatureを取得
+    def first_thought_signature
+      thought_signatures.first
+    end
+
+    # Signatureが存在するか
+    def has_thought_signature?
+      !thought_signatures.empty?
+    end
+
+    # モデルバージョンを取得
+    def model_version
+      @raw_data['modelVersion']
+    end
+
+    # Gemini 3系かどうか
+    def gemini_3?
+      model_version&.start_with?('gemini-3') || false
+    end
+
+    # 関数呼び出しにSignatureを付与してパーツを構築
+    def build_function_call_parts_with_signature
+      function_call_parts = parts.select { |p| p['functionCall'] }
+      signature = first_thought_signature
+
+      function_call_parts.map.with_index do |part, index|
+        fc_part = { functionCall: part['functionCall'] }
+        # 最初のパートにのみSignatureを付与
+        fc_part[:thoughtSignature] = signature if index == 0 && signature
+        fc_part
+      end
+    end
+
     # 画像生成結果から最初の画像を取得（Base64エンコード形式）
     def image
       images.first
