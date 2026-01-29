@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Demo: Gemini Live API - Audio Conversation
+# Demo: Gemini Live API - Real-time Audio Conversation
 #
-# Real-time voice conversation with Gemini using microphone and speaker.
+# Low-latency voice conversation with streaming send/receive.
 #
 # Requirements:
 #   - sox (for rec/play commands)
@@ -14,182 +14,136 @@
 #   ruby demo/live_audio_demo.rb
 
 require "bundler/setup"
-require "gemini"
+require "websocket-client-simple"
+require "json"
 require "base64"
-require "tempfile"
+require "open3"
 
-class AudioPlayer
-  def initialize(sample_rate: 24000)
-    @sample_rate = sample_rate
-    @chunks = []
-    @mutex = Mutex.new
+class LiveAudioSession
+  CHUNK_SIZE = 3200  # 100ms at 16kHz 16bit mono
+  RECORD_DURATION = 5  # max seconds
+
+  def initialize(api_key)
+    @api_key = api_key
+    @ws = nil
+    @setup_done = false
+    @responding = false
+    @play_io = nil
   end
 
-  def add_chunk(base64_data)
-    @mutex.synchronize { @chunks << base64_data }
+  def start
+    connect
+    wait_for_setup
+
+    puts "-" * 50
+    main_loop
+  ensure
+    cleanup
   end
 
-  def clear
-    @mutex.synchronize { @chunks.clear }
-  end
+  private
 
-  def play_all
-    chunks_to_play = @mutex.synchronize { @chunks.dup }
-    return if chunks_to_play.empty?
+  def connect
+    url = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=#{@api_key}"
 
-    combined_pcm = chunks_to_play.map { |c| Base64.decode64(c) }.join
+    @ws = WebSocket::Client::Simple.connect(url)
+    session = self
 
-    temp = Tempfile.new(['audio', '.raw'])
-    temp.binmode
-    temp.write(combined_pcm)
-    temp.close
-
-    system("play", "-q", "-r", @sample_rate.to_s, "-b", "16", "-c", "1",
-           "-e", "signed-integer", "-t", "raw", temp.path,
-           out: File::NULL, err: File::NULL)
-
-    temp.unlink
-    @mutex.synchronize { @chunks.clear }
-  end
-
-  def chunk_count
-    @mutex.synchronize { @chunks.size }
-  end
-end
-
-class AudioRecorder
-  SAMPLE_RATE = 16000
-
-  # VAD付き録音: 話し終わって silence_duration 秒無音で自動停止
-  def record_with_vad(max_duration: 15, silence_duration: 1.0, threshold: "1%")
-    temp_file = Tempfile.new(['recording', '.raw'])
-    temp_file.close
-
-    # silence effect: 最初の無音スキップ + 末尾の無音で停止
-    system("timeout", max_duration.to_s,
-           "rec", "-q", "-r", SAMPLE_RATE.to_s, "-b", "16", "-c", "1",
-           "-e", "signed-integer", "-t", "raw", temp_file.path,
-           "silence", "1", "0.1", threshold,  # 音声開始まで待機
-           "1", silence_duration.to_s, threshold,  # 無音で停止
-           out: File::NULL, err: File::NULL)
-
-    pcm_data = File.binread(temp_file.path)
-    temp_file.unlink
-    pcm_data
-  end
-
-  # 固定時間録音
-  def record(duration)
-    temp_file = Tempfile.new(['recording', '.raw'])
-    temp_file.close
-
-    system("rec", "-q", "-r", SAMPLE_RATE.to_s, "-b", "16", "-c", "1",
-           "-e", "signed-integer", "-t", "raw", temp_file.path,
-           "trim", "0", duration.to_s, out: File::NULL, err: File::NULL)
-
-    pcm_data = File.binread(temp_file.path)
-    temp_file.unlink
-    pcm_data
-  end
-end
-
-def send_audio_message(session, pcm_data)
-  conn = session.instance_variable_get(:@connection)
-  encoded = Base64.strict_encode64(pcm_data)
-
-  # 手動VAD: activityStart → 音声 → activityEnd
-  conn.send({ realtimeInput: { activityStart: {} } })
-
-  conn.send({
-    realtimeInput: {
-      mediaChunks: [{
-        mimeType: "audio/pcm;rate=16000",
-        data: encoded
-      }]
-    }
-  })
-
-  conn.send({ realtimeInput: { activityEnd: {} } })
-end
-
-# Main
-api_key = ENV["GEMINI_API_KEY"]
-unless api_key
-  puts "Error: GEMINI_API_KEY environment variable not set"
-  exit 1
-end
-
-puts "=" * 50
-puts "Gemini Live API - Audio Conversation"
-puts "=" * 50
-puts
-puts "操作方法:"
-puts "  Enter      → 録音開始（話し終わると自動送信）"
-puts "  quit       → 終了"
-puts "  text:〇〇  → テキストで送信"
-puts
-puts "接続中..."
-
-client = Gemini::Client.new(api_key)
-player = AudioPlayer.new
-recorder = AudioRecorder.new
-
-begin
-  client.live.connect(
-    model: "gemini-2.5-flash-native-audio-preview-12-2025",
-    response_modality: "AUDIO",
-    voice_name: "Kore",
-    system_instruction: "You are a friendly voice assistant. Keep responses brief and natural. Match the language of the user.",
-    automatic_activity_detection: false  # 手動VADモード
-  ) do |session|
-    setup_complete = false
-    waiting_response = false
-
-    session.on(:setup_complete) do
-      setup_complete = true
-      puts "接続完了！"
-      puts "-" * 50
+    @ws.on :open do
+      session.send_setup
     end
 
-    session.on(:audio) do |data, _|
-      player.add_chunk(data)
-      print "."
+    @ws.on :message do |msg|
+      session.handle_message(msg.data)
     end
 
-    session.on(:turn_complete) do
-      count = player.chunk_count
-      puts " [#{count} chunks]" if count > 0
-      player.play_all
-      waiting_response = false
+    @ws.on :error do |e|
+      puts "[Error] #{e}" unless e.to_s.include?("stream")
     end
+  end
 
-    session.on(:interrupted) do
+  def send_setup
+    @ws.send({
+      setup: {
+        model: "models/gemini-2.5-flash-native-audio-preview-12-2025",
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } }
+          }
+        },
+        realtimeInputConfig: {
+          automaticActivityDetection: { disabled: true }
+        }
+      }
+    }.to_json)
+  end
+
+  def handle_message(data)
+    parsed = JSON.parse(data) rescue nil
+    return unless parsed
+
+    if parsed["setupComplete"]
+      @setup_done = true
+    elsif parsed["serverContent"]
+      handle_server_content(parsed["serverContent"])
+    end
+  end
+
+  def handle_server_content(content)
+    if content["interrupted"]
       puts "\n[中断]"
-      player.clear
-      waiting_response = false
+      stop_playback
+      @responding = false
+      return
     end
 
-    session.on(:error) do |error|
-      puts "\n[Error] #{error.message}" unless error.message.include?("stream")
-    end
-
-    # Wait for setup
-    15.times do
-      break if setup_complete
-      sleep 1
-    end
-
-    unless setup_complete
-      puts "接続タイムアウト"
-      exit 1
-    end
-
-    loop do
-      # レスポンス待ち中はスキップ
-      if waiting_response
-        sleep 0.1
-        next
+    parts = content.dig("modelTurn", "parts") || []
+    parts.each do |part|
+      if part["inlineData"]
+        # ストリーミング再生
+        start_playback unless @play_io
+        pcm = Base64.decode64(part["inlineData"]["data"])
+        @play_io.write(pcm) rescue nil
+        print "."
       end
+    end
+
+    if content["turnComplete"]
+      puts " [完了]"
+      stop_playback
+      @responding = false
+    end
+  end
+
+  def start_playback
+    @play_io = IO.popen(
+      ["play", "-q", "-r", "24000", "-b", "16", "-c", "1", "-e", "signed-integer", "-t", "raw", "-"],
+      "wb"
+    )
+  end
+
+  def stop_playback
+    @play_io&.close rescue nil
+    @play_io = nil
+  end
+
+  def wait_for_setup
+    print "接続中"
+    30.times do
+      if @setup_done
+        puts " OK!"
+        return
+      end
+      print "."
+      sleep 0.5
+    end
+    raise "接続タイムアウト"
+  end
+
+  def main_loop
+    loop do
+      break if @responding
 
       print "> "
       input = gets&.chomp
@@ -197,35 +151,95 @@ begin
       break if input.nil? || %w[quit exit q].include?(input&.downcase)
 
       if input.start_with?("text:")
-        text = input[5..].strip
-        next if text.empty?
-        puts "テキスト送信中..."
-        waiting_response = true
-        session.send_text(text)
-        next
+        send_text(input[5..].strip)
+      else
+        record_and_send
       end
 
-      # VAD付き録音（話し終わると自動停止）
-      puts ">>> 話してください（1秒無音で自動送信）<<<"
-      pcm_data = recorder.record_with_vad
-
-      if pcm_data.bytesize < 8000  # < 0.25 second
-        puts "録音が短すぎます。もう一度試してください。"
-        next
-      end
-
-      duration = pcm_data.bytesize / 32000.0
-      puts "録音完了 (#{duration.round(1)}秒)"
-
-      puts "送信中..."
-      waiting_response = true
-      send_audio_message(session, pcm_data)
+      # 応答待ち
+      wait_for_response
     end
   end
+
+  def send_text(text)
+    return if text.empty?
+    puts "テキスト送信..."
+    @responding = true
+    @ws.send({
+      clientContent: {
+        turns: [{ role: "user", parts: [{ text: text }] }],
+        turnComplete: true
+      }
+    }.to_json)
+  end
+
+  def record_and_send
+    puts ">>> 話してください（最大#{RECORD_DURATION}秒、無音で自動終了）<<<"
+    @responding = true
+
+    # activityStart
+    @ws.send({ realtimeInput: { activityStart: {} } }.to_json)
+
+    # リアルタイム録音・送信
+    sent = 0
+    Open3.popen3(
+      "rec", "-q", "-r", "16000", "-b", "16", "-c", "1", "-e", "signed-integer", "-t", "raw", "-",
+      "silence", "1", "0.3", "0.5%", "1", "1.5", "0.5%",
+      "trim", "0", RECORD_DURATION.to_s
+    ) do |stdin, stdout, stderr, thread|
+      stdin.close
+      while (chunk = stdout.read(CHUNK_SIZE))
+        break if chunk.empty?
+        @ws.send({
+          realtimeInput: {
+            mediaChunks: [{ mimeType: "audio/pcm;rate=16000", data: Base64.strict_encode64(chunk) }]
+          }
+        }.to_json)
+        sent += chunk.bytesize
+        print "s"
+      end
+    end
+
+    puts "\n送信完了 (#{(sent / 32000.0).round(1)}秒)"
+
+    # activityEnd
+    @ws.send({ realtimeInput: { activityEnd: {} } }.to_json)
+  end
+
+  def wait_for_response
+    60.times do
+      break unless @responding
+      sleep 0.5
+    end
+  end
+
+  def cleanup
+    stop_playback
+    @ws&.close rescue nil
+  end
+end
+
+# Main
+api_key = ENV["GEMINI_API_KEY"]
+unless api_key
+  puts "Error: GEMINI_API_KEY not set"
+  exit 1
+end
+
+puts "=" * 50
+puts "Gemini Live API - Real-time Audio Conversation"
+puts "=" * 50
+puts
+puts "操作方法:"
+puts "  Enter      → 録音開始（無音で自動送信）"
+puts "  text:〇〇  → テキストで送信"
+puts "  quit       → 終了"
+puts
+
+begin
+  LiveAudioSession.new(api_key).start
 rescue Interrupt
   puts "\nBye!"
 rescue => e
-  puts "Error: #{e.class}: #{e.message}"
+  puts "Error: #{e.message}"
 end
-
-puts "終了しました"
