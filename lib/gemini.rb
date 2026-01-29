@@ -20,6 +20,7 @@ require_relative "gemini/function_calling_helper"
 require_relative "gemini/documents"
 require_relative "gemini/cached_content"
 require_relative "gemini/video"
+require_relative "gemini/live"
 
 module Gemini
   class Error < StandardError; end

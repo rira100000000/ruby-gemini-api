@@ -70,6 +70,11 @@ module Gemini
       @cached_content ||= Gemini::CachedContent.new(client: self)
     end
 
+    # Live APIアクセサ
+    def live
+      @live ||= Gemini::Live.new(client: self)
+    end
+
     def reset_headers
       @extra_headers = {}
     end

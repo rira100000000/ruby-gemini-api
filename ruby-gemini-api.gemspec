@@ -23,6 +23,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", "~> 2.0"
   spec.add_dependency "faraday-multipart", "~> 1.0"
   spec.add_dependency "json", "~> 2.0"
+  spec.add_dependency "websocket-client-simple", "~> 0.8"
 
   # 開発時の依存関係
   spec.add_development_dependency "rake", "~> 13.0"
