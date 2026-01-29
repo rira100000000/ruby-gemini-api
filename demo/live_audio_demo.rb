@@ -60,6 +60,25 @@ end
 class AudioRecorder
   SAMPLE_RATE = 16000
 
+  # VAD付き録音: 話し終わって silence_duration 秒無音で自動停止
+  def record_with_vad(max_duration: 15, silence_duration: 1.0, threshold: "1%")
+    temp_file = Tempfile.new(['recording', '.raw'])
+    temp_file.close
+
+    # silence effect: 最初の無音スキップ + 末尾の無音で停止
+    system("timeout", max_duration.to_s,
+           "rec", "-q", "-r", SAMPLE_RATE.to_s, "-b", "16", "-c", "1",
+           "-e", "signed-integer", "-t", "raw", temp_file.path,
+           "silence", "1", "0.1", threshold,  # 音声開始まで待機
+           "1", silence_duration.to_s, threshold,  # 無音で停止
+           out: File::NULL, err: File::NULL)
+
+    pcm_data = File.binread(temp_file.path)
+    temp_file.unlink
+    pcm_data
+  end
+
+  # 固定時間録音
   def record(duration)
     temp_file = Tempfile.new(['recording', '.raw'])
     temp_file.close
@@ -75,17 +94,22 @@ class AudioRecorder
 end
 
 def send_audio_message(session, pcm_data)
-  # 音声をBase64エンコードして直接送信
+  conn = session.instance_variable_get(:@connection)
   encoded = Base64.strict_encode64(pcm_data)
-  msg = {
+
+  # 手動VAD: activityStart → 音声 → activityEnd
+  conn.send({ realtimeInput: { activityStart: {} } })
+
+  conn.send({
     realtimeInput: {
       mediaChunks: [{
         mimeType: "audio/pcm;rate=16000",
         data: encoded
       }]
     }
-  }
-  session.instance_variable_get(:@connection).send(msg)
+  })
+
+  conn.send({ realtimeInput: { activityEnd: {} } })
 end
 
 # Main
@@ -100,7 +124,7 @@ puts "Gemini Live API - Audio Conversation"
 puts "=" * 50
 puts
 puts "操作方法:"
-puts "  Enter      → 録音開始/停止・送信"
+puts "  Enter      → 録音開始（話し終わると自動送信）"
 puts "  quit       → 終了"
 puts "  text:〇〇  → テキストで送信"
 puts
@@ -115,7 +139,8 @@ begin
     model: "gemini-2.5-flash-native-audio-preview-12-2025",
     response_modality: "AUDIO",
     voice_name: "Kore",
-    system_instruction: "You are a friendly voice assistant. Keep responses brief and natural. Match the language of the user."
+    system_instruction: "You are a friendly voice assistant. Keep responses brief and natural. Match the language of the user.",
+    automatic_activity_detection: false  # 手動VADモード
   ) do |session|
     setup_complete = false
     waiting_response = false
@@ -180,22 +205,21 @@ begin
         next
       end
 
-      # 録音
-      puts ">>> 3秒間録音します。話してください！ <<<"
-      pcm_data = recorder.record(3)
+      # VAD付き録音（話し終わると自動停止）
+      puts ">>> 話してください（1秒無音で自動送信）<<<"
+      pcm_data = recorder.record_with_vad
 
-      if pcm_data.bytesize < 16000  # < 0.5 second
-        puts "録音が短すぎます"
+      if pcm_data.bytesize < 8000  # < 0.25 second
+        puts "録音が短すぎます。もう一度試してください。"
         next
       end
+
+      duration = pcm_data.bytesize / 32000.0
+      puts "録音完了 (#{duration.round(1)}秒)"
 
       puts "送信中..."
       waiting_response = true
       send_audio_message(session, pcm_data)
-
-      # 少し待ってからテキストでトリガー
-      sleep 0.3
-      session.send_text("(respond to my voice message)")
     end
   end
 rescue Interrupt
