@@ -41,8 +41,6 @@ class LiveAudioSession
     cleanup
   end
 
-  private
-
   def connect
     url = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=#{@api_key}"
 
@@ -89,6 +87,8 @@ class LiveAudioSession
       handle_server_content(parsed["serverContent"])
     end
   end
+
+  private
 
   def handle_server_content(content)
     if content["interrupted"]
