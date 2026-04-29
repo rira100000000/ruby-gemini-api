@@ -3,18 +3,24 @@
 
 # Demo: Gemini Live API - Function Calling
 #
-# Note: As of writing, the only Live API model on which function calling is
-# verified to work end-to-end is the native-audio preview model with the
-# AUDIO response modality. The "gemini-2.5-flash-live-preview" model that
-# the public docs list as supporting tools is not yet deployed on the
-# bidiGenerateContent endpoint, and "gemini-3.1-flash-live-preview" returns
-# an internal error. This demo therefore uses AUDIO modality and writes the
-# spoken response to a WAV file (and plays it through sox `play` if
-# available).
+# Verified working models (AUDIO response modality, realtimeInput.text):
+#   - gemini-2.5-flash-native-audio-preview-12-2025 (default)
+#   - gemini-3.1-flash-live-preview
+#
+# Note: gemini-3.1-flash-live-preview rejects the legacy
+# clientContent.turns payload, so we use Session#send_realtime_text which
+# emits the universal realtimeInput.text form. The
+# "gemini-2.5-flash-live-preview" name listed in the public tools docs is
+# not deployed on bidiGenerateContent at the time of writing.
+#
+# Audio response is captured and either played via sox (`play`) or written
+# to a WAV file in the working directory.
 #
 # Usage:
 #   export GEMINI_API_KEY=your_api_key
 #   ruby demo/live_function_calling_demo.rb
+#   # Or specify a different deployed model:
+#   GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview ruby demo/live_function_calling_demo.rb
 
 require "bundler/setup"
 require "gemini"
@@ -111,6 +117,7 @@ puts "Connecting to Gemini Live API with Function Calling..."
 
 begin
   client.live.connect(
+    model: ENV.fetch("GEMINI_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
     response_modality: "AUDIO",
     voice_name: "Kore",
     tools: tools,
@@ -196,11 +203,11 @@ begin
     end
 
     puts "You: What's the weather like in Tokyo?"
-    session.send_text("What's the weather like in Tokyo?")
+    session.send_realtime_text("What's the weather like in Tokyo?")
     sleep 18
 
     puts "\nYou: What time is it in New York?"
-    session.send_text("What time is it in New York?")
+    session.send_realtime_text("What time is it in New York?")
     sleep 18
   end
 rescue Interrupt

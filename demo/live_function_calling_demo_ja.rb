@@ -3,17 +3,23 @@
 
 # デモ: Gemini Live API - Function Calling
 #
-# 注意: 現時点で Function Calling が確実に動作する Live API のモデルは、
-# native-audio プレビューモデル + AUDIO モダリティの組み合わせのみです。
-# 公式ドキュメントが推奨する gemini-2.5-flash-live-preview は
-# bidiGenerateContent エンドポイントにまだデプロイされておらず、
-# gemini-3.1-flash-live-preview は内部エラーになります。
-# そのため本デモは AUDIO モダリティで動作し、応答音声は WAV に書き出すと
-# 同時に sox の `play` コマンドが利用可能であれば再生します。
+# 動作確認済みモデル（AUDIO モダリティ + realtimeInput.text）:
+#   - gemini-2.5-flash-native-audio-preview-12-2025（デフォルト）
+#   - gemini-3.1-flash-live-preview
+#
+# 注意: gemini-3.1-flash-live-preview は従来の clientContent.turns 形式を
+# 受け付けないため、本デモでは Session#send_realtime_text を用いて
+# realtimeInput.text 形式で送信しています（両モデル共通で動作する形式）。
+# 公式 tools ドキュメントの "gemini-2.5-flash-live-preview" は執筆時点で
+# bidiGenerateContent にデプロイされていません。
+#
+# 応答音声は sox の `play` で再生するか、WAV ファイルとして保存します。
 #
 # 使い方:
 #   export GEMINI_API_KEY=your_api_key
 #   ruby demo/live_function_calling_demo_ja.rb
+#   # 別のモデルで試す場合:
+#   GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview ruby demo/live_function_calling_demo_ja.rb
 
 require "bundler/setup"
 require "gemini"
@@ -110,6 +116,7 @@ puts "Gemini Live API に接続中（Function Calling 有効）..."
 
 begin
   client.live.connect(
+    model: ENV.fetch("GEMINI_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
     response_modality: "AUDIO",
     voice_name: "Kore",
     tools: tools,
@@ -195,11 +202,11 @@ begin
     end
 
     puts "あなた: 東京の天気はどう？"
-    session.send_text("東京の天気はどう？")
+    session.send_realtime_text("東京の天気はどう？")
     sleep 18
 
     puts "\nあなた: ニューヨークは今何時？"
-    session.send_text("ニューヨークは今何時？")
+    session.send_realtime_text("ニューヨークは今何時？")
     sleep 18
   end
 rescue Interrupt

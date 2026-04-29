@@ -1023,7 +1023,7 @@ client.live.connect(
 
   sleep 0.05 until setup_complete
 
-  session.send_text("What is the capital of Japan?")
+  session.send_realtime_text("What is the capital of Japan?")
   sleep 8
 end
 ```
@@ -1034,8 +1034,15 @@ For text-only responses, see the note below about Live model availability.
 
 The Live API supports function calling. Define your tools, register a `:tool_call` handler, and reply with `session.send_tool_response`.
 
-> **Note on currently-deployed Live models**
-> The public docs list `gemini-2.5-flash-live-preview` as the recommended Live model, but as of writing it is not yet deployed on the `bidiGenerateContent` endpoint, and `gemini-3.1-flash-live-preview` returns an internal error. The only currently-working combination for function calling is the **native-audio preview model with the AUDIO response modality** (which is also what the `Configuration::DEFAULT_MODEL` points to). When TEXT-modality Live models are rolled out, the same code below works by changing `response_modality:` and dropping `voice_name:`.
+> **Note on Live model input format**
+> Newer Live models such as `gemini-3.1-flash-live-preview` reject the
+> legacy `clientContent.turns[]` payload that older models (including the
+> native-audio variants) accept. Use `session.send_realtime_text(...)`
+> instead of `session.send_text(...)`, which emits the universal
+> `realtimeInput.text` form and works on every currently-deployed Live
+> model. The `gemini-2.5-flash-live-preview` model name listed in the
+> public tools docs is not deployed on the `bidiGenerateContent` endpoint
+> at the time of writing.
 
 ```ruby
 require 'base64'
@@ -1080,7 +1087,7 @@ client.live.connect(
   end
 
   sleep 0.5  # wait for setup
-  session.send_text("What's the weather in Tokyo?")
+  session.send_realtime_text("What's the weather in Tokyo?")
   sleep 18
 end
 
@@ -1144,7 +1151,13 @@ The public Live API tools docs list:
 | `gemini-2.5-flash-live-preview` | ✓ | ✓ | ✓ |
 | `gemini-3.1-flash-live-preview` | ✓ | — | ✓ |
 
-In practice, on the `bidiGenerateContent` endpoint as of writing, only the native-audio preview variants are deployed and respond successfully. The library defaults to `gemini-2.5-flash-native-audio-preview-12-2025`, which works with **AUDIO** response modality and accepts function-calling tools. The two Live preview models above are recognized by the documentation but currently return errors when contacted directly. Once they are rolled out, the same code in this README works against them with `response_modality: "TEXT"`.
+In practice, on the `bidiGenerateContent` endpoint as of writing:
+
+- `gemini-3.1-flash-live-preview` is deployed and works with **AUDIO** response modality + tools, **but only when text input is sent via `session.send_realtime_text(...)`** (i.e., `realtimeInput.text`). It rejects the legacy `clientContent.turns[]` payload.
+- `gemini-2.5-flash-native-audio-preview-12-2025` (the library default) is deployed and accepts both `send_realtime_text` and `send_text` (legacy `clientContent.turns[]`).
+- `gemini-2.5-flash-live-preview` from the docs table is **not yet deployed**.
+
+Once a TEXT-modality-capable Live model ships, the same code works with `response_modality: "TEXT"` and the `voice_name:` argument removed.
 
 Demos available:
 

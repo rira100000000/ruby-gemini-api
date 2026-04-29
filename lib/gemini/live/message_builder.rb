@@ -80,7 +80,11 @@ module Gemini
           }
         end
 
-        # Build realtime input message (audio/video)
+        # Build realtime input message (audio/video) using the legacy
+        # mediaChunks field. NOTE: mediaChunks is deprecated by the API in
+        # favor of the dedicated audio/video fields built by realtime_audio
+        # and realtime_video. Kept for backward compatibility with older
+        # Live models that still accept it.
         def realtime_input(audio_data: nil, video_data: nil, mime_type:)
           data = audio_data || video_data
           {
@@ -93,6 +97,14 @@ module Gemini
               ]
             }
           }
+        end
+
+        # Build a realtime text input message. This is the universal
+        # text-input form for the Live API and is required by newer Live
+        # models such as gemini-3.1-flash-live-preview, which reject the
+        # turn-based clientContent payload.
+        def realtime_text(text)
+          { realtimeInput: { text: text.to_s } }
         end
 
         # Build activity start message (for manual VAD)

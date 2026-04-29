@@ -1029,7 +1029,7 @@ client.live.connect(
 
   sleep 0.05 until setup_complete
 
-  session.send_text("日本の首都は？")
+  session.send_realtime_text("日本の首都は？")
   sleep 8
 end
 ```
@@ -1040,8 +1040,16 @@ end
 
 Live API は Function Calling に対応しています。tools を定義し、`:tool_call` ハンドラで関数を実行して `session.send_tool_response` で結果を返します。
 
-> **現状デプロイされている Live モデルに関する注意**
-> 公式ドキュメントは `gemini-2.5-flash-live-preview` を Live API の推奨モデルとして紹介していますが、執筆時点で `bidiGenerateContent` エンドポイントにまだデプロイされていません。`gemini-3.1-flash-live-preview` も内部エラーを返します。Function Calling が現状で確実に動作する組み合わせは **native-audio プレビューモデル + AUDIO モダリティ** のみです（`Configuration::DEFAULT_MODEL` もこれを指しています）。テキスト応答対応の Live モデルが提供開始されたら、下記コードの `response_modality:` を変えるだけで動きます。
+> **Live モデルの入力形式に関する注意**
+> `gemini-3.1-flash-live-preview` などの新しい Live モデルは、従来の
+> `clientContent.turns[]` 形式の入力ペイロードを拒否します（古い
+> native-audio 系モデルは両方受け付けます）。`session.send_text(...)` の
+> 代わりに `session.send_realtime_text(...)` を使うと、内部で
+> `realtimeInput.text` 形式が送信され、現状デプロイされているすべての
+> Live モデルで動作します。
+> なお `gemini-2.5-flash-live-preview` は公式 tools ドキュメントには
+> 載っていますが、執筆時点で `bidiGenerateContent` にデプロイされて
+> いません。
 
 ```ruby
 require 'base64'
@@ -1086,7 +1094,7 @@ client.live.connect(
   end
 
   sleep 0.5  # セットアップ待ち
-  session.send_text("東京の天気は？")
+  session.send_realtime_text("東京の天気は？")
   sleep 18
 end
 
@@ -1150,7 +1158,13 @@ end
 | `gemini-2.5-flash-live-preview` | ✓ | ✓ | ✓ |
 | `gemini-3.1-flash-live-preview` | ✓ | — | ✓ |
 
-ただし執筆時点で `bidiGenerateContent` エンドポイント上に実際にデプロイされて動作するのは native-audio 系のみです。本ライブラリのデフォルトは `gemini-2.5-flash-native-audio-preview-12-2025` で、**AUDIO** モダリティ + Function Calling tools の組み合わせで動作することを確認しています。上記2つのプレビューモデルはドキュメントに記載があるものの、現状直接呼び出すとエラーになります。提供開始されれば `response_modality: "TEXT"` でこの README のコードがそのまま使えるようになります。
+執筆時点で `bidiGenerateContent` エンドポイント上の動作状況:
+
+- `gemini-3.1-flash-live-preview` はデプロイ済みで、**AUDIO** モダリティ + tools の組み合わせで動作確認できています。**ただし入力は必ず `session.send_realtime_text(...)`（つまり `realtimeInput.text` 形式）で送る必要があります。** 旧来の `clientContent.turns[]` 形式は拒否されます。
+- `gemini-2.5-flash-native-audio-preview-12-2025`（ライブラリのデフォルト）はデプロイ済みで、`send_realtime_text` と `send_text`（旧 `clientContent.turns[]` 形式）の両方を受け付けます。
+- ドキュメント記載の `gemini-2.5-flash-live-preview` は **未デプロイ**です。
+
+将来 TEXT 応答対応の Live モデルが提供開始されれば、`response_modality: "TEXT"` に切り替え、`voice_name:` を外すだけで本 README のコードがそのまま動作します。
 
 利用可能な Live API デモ:
 

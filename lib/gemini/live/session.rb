@@ -42,7 +42,10 @@ module Gemini
         self
       end
 
-      # Send text message
+      # Send text message via clientContent.turns. This is the legacy form
+      # used by native-audio Live models. Newer models such as
+      # gemini-3.1-flash-live-preview reject this payload — use
+      # #send_realtime_text instead, which works on every Live model.
       def send_text(text, turn_complete: true)
         ensure_setup_complete!
         message = MessageBuilder.client_content(
@@ -50,6 +53,14 @@ module Gemini
           turn_complete: turn_complete
         )
         @connection.send(message)
+      end
+
+      # Send text input via realtimeInput.text (universal form).
+      # Works with every currently-deployed Live model, including
+      # gemini-3.1-flash-live-preview and native-audio variants.
+      def send_realtime_text(text)
+        ensure_setup_complete!
+        @connection.send(MessageBuilder.realtime_text(text))
       end
 
       # Send audio data (Base64 encoded PCM)

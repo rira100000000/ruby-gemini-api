@@ -182,6 +182,18 @@ RSpec.describe Gemini::Live::MessageBuilder do
     end
   end
 
+  describe ".realtime_text" do
+    it "wraps the text in realtimeInput.text" do
+      message = described_class.realtime_text("Hello!")
+      expect(message).to eq({ realtimeInput: { text: "Hello!" } })
+    end
+
+    it "coerces non-String values to strings" do
+      message = described_class.realtime_text(:hi)
+      expect(message[:realtimeInput][:text]).to eq("hi")
+    end
+  end
+
   describe ".activity_end" do
     it "builds activity end message" do
       message = described_class.activity_end
