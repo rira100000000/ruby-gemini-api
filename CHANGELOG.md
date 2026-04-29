@@ -1,6 +1,19 @@
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-29
+
 ### Added
+- Live API support for real-time bidirectional audio/video/text conversations over WebSocket
+  - `Gemini::Live::Session` with event-driven API (`:setup_complete`, `:text`, `:audio`, `:tool_call`, `:turn_complete`, `:interrupted`, `:usage_metadata`, `:session_resumption`, `:go_away`, `:close`, `:error`)
+  - `Gemini::Live::Configuration` with response modality, voice, system instruction, tools, context-window compression, session resumption, manual VAD, output audio transcription
+  - `Gemini::Live::MessageBuilder` for setup, clientContent, realtimeInput, activity start/end, and tool response messages
+- Live API audio demos: `live_audio_demo.rb` (low-latency streaming), `live_audio_simple.rb`
+- Manual VAD (Voice Activity Detection) support via `automatic_activity_detection: false`
+- Live API Function Calling
+  - `Session#send_realtime_text(text)` — universal text input via `realtimeInput.text`, required by newer Live models such as `gemini-3.1-flash-live-preview`
+  - `MessageBuilder.realtime_text(text)` builder
+  - Async (NON_BLOCKING) function call support: `MessageBuilder.tool_response` validates and normalizes the `scheduling` field (`INTERRUPT`, `WHEN_IDLE`, `SILENT`), accepted either inside the response payload or as a top-level shortcut
+  - Demos: `live_function_calling_demo.rb` / `live_function_calling_demo_ja.rb`
 - Embeddings API support (`embedContent` and `batchEmbedContents`)
   - `client.embeddings_api.create(input:, ...)` for single embeddings
   - `client.embeddings_api.batch_create(inputs:, ...)` for batch embeddings
@@ -8,25 +21,11 @@
   - Optional parameters: `task_type` (RETRIEVAL_QUERY, RETRIEVAL_DOCUMENT, SEMANTIC_SIMILARITY, CLASSIFICATION, CLUSTERING, QUESTION_ANSWERING, FACT_VERIFICATION, CODE_RETRIEVAL_QUERY), `title` (RETRIEVAL_DOCUMENT only), `output_dimensionality`
   - Default model: `gemini-embedding-001`
 - `Response` helpers for embeddings: `#embedding`, `#embeddings`, `#embedding_dimension`, `#embedding_response?`
-- Live API Function Calling support
-  - `Session#send_realtime_text(text)` — universal text input via `realtimeInput.text`, required by newer Live models such as `gemini-3.1-flash-live-preview`
-  - `MessageBuilder.realtime_text(text)` builder
-  - Async (NON_BLOCKING) function call support: `MessageBuilder.tool_response` validates and normalizes the `scheduling` field (`INTERRUPT`, `WHEN_IDLE`, `SILENT`), accepted either inside the response payload or as a top-level shortcut
-- Demos: `embeddings_demo.rb` / `embeddings_demo_ja.rb`, `live_function_calling_demo.rb` / `live_function_calling_demo_ja.rb`
+- Demos: `embeddings_demo.rb` / `embeddings_demo_ja.rb`
 
-### Changed
-- Live API documentation now reflects the actual deployment state of `bidiGenerateContent` models: only the native-audio variants and `gemini-3.1-flash-live-preview` work today, the latter requires `realtimeInput.text` and `AUDIO` modality
-- `MessageBuilder.realtime_input` (legacy `mediaChunks` path) is documented as deprecated by the upstream API; new code should prefer `realtime_text` (and forthcoming `realtime_audio`/`realtime_video`)
-
-## [1.1.0] - 2026-01-29
-
-### Added
-- Live API support for real-time bidirectional audio/video/text conversations over WebSocket
-  - `Gemini::Live::Session` with event-driven API (`:setup_complete`, `:text`, `:audio`, `:tool_call`, `:turn_complete`, `:interrupted`, `:usage_metadata`, `:session_resumption`, `:go_away`, `:close`, `:error`)
-  - `Gemini::Live::Configuration` with response modality, voice, system instruction, tools, context-window compression, session resumption, manual VAD, output audio transcription
-  - `Gemini::Live::MessageBuilder` for setup, clientContent, realtimeInput, activity start/end, and tool response messages
-- Audio demos: `live_audio_demo.rb` (low-latency streaming), `live_audio_simple.rb`
-- Manual VAD (Voice Activity Detection) support via `automatic_activity_detection: false`
+### Notes
+- Verified Live model compatibility on the `bidiGenerateContent` endpoint: only the native-audio variants and `gemini-3.1-flash-live-preview` are deployed today. The latter requires `realtimeInput.text` (i.e., `Session#send_realtime_text`) and `AUDIO` modality. The `gemini-2.5-flash-live-preview` model name listed in the public tools docs is not yet deployed.
+- `MessageBuilder.realtime_input` (legacy `mediaChunks` path) is documented as deprecated by the upstream API; prefer `realtime_text` going forward.
 
 ## [1.0.0] - 2026-01-28
 
