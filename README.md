@@ -31,6 +31,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Document processing (PDFs and other formats)
 - Context caching for efficient processing
 - Text embeddings (single and batch) with task type, title, and output dimensionality control
+- Live API: real-time bidirectional conversations with text/audio/video and function calling (sync and async)
 
 ### Function Calling
 
@@ -993,6 +994,147 @@ end
 
 For a complete example of context caching, check out the `demo/document_cache_demo.rb` file.
 
+### Live API (Real-time Conversations)
+
+The Gemini Live API provides bidirectional WebSocket-based real-time conversations with audio, video, and text support. The library wraps the protocol behind an event-driven `Gemini::Live::Session`.
+
+#### Basic Text Conversation
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+client.live.connect(
+  model: "gemini-2.5-flash-live-preview",
+  response_modality: "TEXT",
+  system_instruction: "You are a helpful assistant."
+) do |session|
+  setup_complete = false
+
+  session.on(:setup_complete) { setup_complete = true }
+  session.on(:text)           { |text| print text }
+  session.on(:turn_complete)  { puts }
+  session.on(:error)          { |e| puts "Error: #{e.message}" }
+
+  sleep 0.05 until setup_complete
+
+  session.send_text("What is the capital of Japan?")
+  sleep 5
+end
+```
+
+#### Function Calling (Synchronous)
+
+The Live API supports function calling. Define your tools, register a `:tool_call` handler, and reply with `session.send_tool_response`.
+
+```ruby
+tools = [
+  {
+    functionDeclarations: [
+      {
+        name: "get_weather",
+        description: "Get the current weather for a location",
+        parameters: {
+          type: "object",
+          properties: {
+            location: { type: "string", description: "City name" }
+          },
+          required: ["location"]
+        }
+      }
+    ]
+  }
+]
+
+client.live.connect(
+  model: "gemini-2.5-flash-live-preview",
+  response_modality: "TEXT",
+  tools: tools,
+  system_instruction: "Use the available functions when asked about weather."
+) do |session|
+  session.on(:text) { |text| print text }
+
+  session.on(:tool_call) do |function_calls|
+    responses = function_calls.map do |call|
+      result = case call[:name]
+               when "get_weather"
+                 { temperature: 22, condition: "sunny", location: call[:args]["location"] }
+               end
+      { id: call[:id], name: call[:name], response: result }
+    end
+    session.send_tool_response(responses)
+  end
+
+  sleep 0.5  # wait for setup
+  session.send_text("What's the weather in Tokyo?")
+  sleep 8
+end
+```
+
+A complete example is in `demo/live_function_calling_demo.rb`.
+
+#### Function Calling (Asynchronous / NON_BLOCKING)
+
+`gemini-2.5-flash-live-preview` supports asynchronous function calls. Mark a function declaration with `behavior: "NON_BLOCKING"` so the model can keep talking while the call runs, then control how the result is delivered back via `scheduling`.
+
+```ruby
+tools = [
+  {
+    functionDeclarations: [
+      {
+        name: "fetch_long_running_data",
+        behavior: "NON_BLOCKING",
+        description: "Slow data lookup",
+        parameters: { type: "object", properties: {} }
+      }
+    ]
+  }
+]
+
+session.on(:tool_call) do |function_calls|
+  responses = function_calls.map do |call|
+    {
+      id: call[:id],
+      name: call[:name],
+      response: { result: "data ready" },
+      scheduling: "INTERRUPT"  # or "WHEN_IDLE", "SILENT"
+    }
+  end
+  session.send_tool_response(responses)
+end
+```
+
+`scheduling` can also be placed inside the `response:` hash directly. Valid values: `INTERRUPT`, `WHEN_IDLE`, `SILENT`. The library validates and uppercases the value automatically; an unknown value raises `ArgumentError`.
+
+#### Built-in Tools
+
+Google Search grounding is supported in the Live API:
+
+```ruby
+client.live.connect(
+  model: "gemini-2.5-flash-live-preview",
+  tools: [{ google_search: {} }]
+) do |session|
+  # ...
+end
+```
+
+#### Supported Live API Models for Tools
+
+| Model | Sync Function Calling | Async (NON_BLOCKING) | Google Search |
+|---|---|---|---|
+| `gemini-2.5-flash-live-preview` (default) | ✓ | ✓ | ✓ |
+| `gemini-3.1-flash-live-preview` | ✓ | — | ✓ |
+
+The native-audio preview models (e.g. `gemini-2.5-flash-native-audio-preview-12-2025`) are tuned for low-latency speech I/O and are not officially listed for tool support — use `gemini-2.5-flash-live-preview` when you need function calling.
+
+Demos available:
+
+- `demo/live_text_demo.rb` - Live API text conversation
+- `demo/live_audio_demo.rb` - Live API audio conversation
+- `demo/live_function_calling_demo.rb` - Live API function calling
+
 ### Embeddings
 
 You can generate text embeddings using the Gemini Embeddings API. Embeddings are vector representations of text that can be used for semantic similarity, classification, clustering, retrieval, and more.
@@ -1332,6 +1474,9 @@ The gem includes several demo applications that showcase its functionality:
 - `demo/document_conversation_demo.rb` - Conversation with documents
 - `demo/document_cache_demo.rb` - Document caching
 - `demo/embeddings_demo.rb` - Text embeddings (single and batch)
+- `demo/live_text_demo.rb` - Live API text conversation
+- `demo/live_audio_demo.rb` - Live API audio conversation
+- `demo/live_function_calling_demo.rb` - Live API function calling
 
 Run the demos with:
 

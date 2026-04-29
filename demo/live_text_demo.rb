@@ -24,7 +24,7 @@ puts "Connecting to Gemini Live API..."
 
 begin
   client.live.connect(
-    model: "gemini-2.0-flash-live-001",
+    model: "gemini-2.5-flash-live-preview",
     response_modality: "TEXT",
     system_instruction: "You are a helpful and concise assistant. Keep responses brief."
   ) do |session|

@@ -8,7 +8,7 @@ RSpec.describe Gemini::Live::MessageBuilder do
       it "builds correct setup message" do
         message = described_class.setup(config)
 
-        expect(message[:setup][:model]).to eq("models/gemini-2.5-flash-native-audio-preview-12-2025")
+        expect(message[:setup][:model]).to eq("models/gemini-2.5-flash-live-preview")
         expect(message[:setup][:generationConfig][:responseModalities]).to eq(["TEXT"])
       end
     end
@@ -203,6 +203,59 @@ RSpec.describe Gemini::Live::MessageBuilder do
         { id: "call_1", name: "get_weather", response: { result: "Sunny" } },
         { id: "call_2", name: "get_time", response: { result: "12:00" } }
       ])
+    end
+
+    context "with scheduling for async (NON_BLOCKING) function calls" do
+      it "preserves scheduling already inside the response payload and uppercases it" do
+        message = described_class.tool_response([
+          { id: "x", name: "fn", response: { result: "ok", scheduling: :interrupt } }
+        ])
+
+        expect(message[:toolResponse][:functionResponses].first[:response]).to eq({
+          result: "ok",
+          scheduling: "INTERRUPT"
+        })
+      end
+
+      it "accepts scheduling as a top-level shortcut and merges it into the response" do
+        message = described_class.tool_response([
+          { id: "x", name: "fn", response: { result: "ok" }, scheduling: "WHEN_IDLE" }
+        ])
+
+        expect(message[:toolResponse][:functionResponses].first[:response]).to eq({
+          result: "ok",
+          scheduling: "WHEN_IDLE"
+        })
+      end
+
+      it "wraps non-Hash response values into { result: ... } when scheduling is given" do
+        message = described_class.tool_response([
+          { id: "x", name: "fn", response: "ok", scheduling: "SILENT" }
+        ])
+
+        expect(message[:toolResponse][:functionResponses].first[:response]).to eq({
+          result: "ok",
+          scheduling: "SILENT"
+        })
+      end
+
+      it "raises ArgumentError for invalid scheduling values" do
+        expect {
+          described_class.tool_response([
+            { id: "x", name: "fn", response: { result: "ok" }, scheduling: "BOGUS" }
+          ])
+        }.to raise_error(ArgumentError, /scheduling must be one of/)
+      end
+
+      it "accepts a String scheduling key inside the response payload" do
+        message = described_class.tool_response([
+          { id: "x", name: "fn", response: { "result" => "ok", "scheduling" => "interrupt" } }
+        ])
+
+        payload = message[:toolResponse][:functionResponses].first[:response]
+        expect(payload[:scheduling]).to eq("INTERRUPT")
+        expect(payload).not_to have_key("scheduling")
+      end
     end
   end
 end

@@ -10,7 +10,7 @@ module Gemini
   #
   # @example Basic text conversation
   #   client = Gemini::Client.new(api_key)
-  #   session = client.live.connect(model: "gemini-2.0-flash-live-001")
+  #   session = client.live.connect(model: "gemini-2.5-flash-live-preview")
   #
   #   session.on(:setup_complete) { puts "Connected!" }
   #   session.on(:text) { |text| puts "AI: #{text}" }
@@ -22,7 +22,7 @@ module Gemini
   #
   # @example Audio conversation
   #   session = client.live.connect(
-  #     model: "gemini-2.0-flash-live-001",
+  #     model: "gemini-2.5-flash-live-preview",
   #     response_modality: "AUDIO",
   #     voice_name: "Puck"
   #   )
@@ -31,7 +31,7 @@ module Gemini
   #   session.send_audio(pcm_data)  # 16-bit PCM, 16kHz, mono
   #
   # @example With block (auto-close)
-  #   client.live.connect(model: "gemini-2.0-flash-live-001") do |session|
+  #   client.live.connect(model: "gemini-2.5-flash-live-preview") do |session|
   #     session.on(:text) { |text| puts text }
   #     session.send_text("Hello!")
   #     sleep 5
@@ -44,7 +44,7 @@ module Gemini
 
     # Establish a WebSocket connection and return a session
     #
-    # @param model [String] Model to use (default: "gemini-2.0-flash-live-001")
+    # @param model [String] Model to use (default: "gemini-2.5-flash-live-preview")
     # @param response_modality [String] "TEXT" or "AUDIO" (default: "TEXT")
     # @param voice_name [String] Voice for audio responses (Puck, Charon, Kore, etc.)
     # @param system_instruction [String] System prompt

@@ -4,6 +4,8 @@ module Gemini
   class Live
     # Helper class to build Live API messages
     class MessageBuilder
+      VALID_SCHEDULING = %w[INTERRUPT WHEN_IDLE SILENT].freeze
+
       class << self
         # Build setup message from configuration
         def setup(config)
@@ -111,22 +113,58 @@ module Gemini
           }
         end
 
-        # Build tool response message
+        # Build tool response message.
+        #
+        # Each function response hash supports:
+        #   :id       - The function call id from the server
+        #   :name     - The function name
+        #   :response - The function result (Hash or scalar). When using
+        #               NON_BLOCKING (async) function calls, include
+        #               `scheduling: "INTERRUPT" | "WHEN_IDLE" | "SILENT"`
+        #               inside the response hash.
+        #   :scheduling - (optional) Top-level shortcut. When provided,
+        #                 it is merged into the response hash as
+        #                 `response[:scheduling]`. Accepts Symbol or String.
+        #
+        # Raises ArgumentError if scheduling is not one of the valid values.
         def tool_response(function_responses)
           {
             toolResponse: {
-              functionResponses: function_responses.map do |resp|
-                {
-                  id: resp[:id],
-                  name: resp[:name],
-                  response: resp[:response]
-                }
-              end
+              functionResponses: function_responses.map { |resp| build_function_response(resp) }
             }
           }
         end
 
         private
+
+        def build_function_response(resp)
+          response_payload =
+            case resp[:response]
+            when Hash then resp[:response].dup
+            when nil  then {}
+            else { result: resp[:response] }
+            end
+
+          if (top_level_scheduling = resp[:scheduling])
+            response_payload[:scheduling] = normalize_scheduling(top_level_scheduling)
+          elsif (sched = response_payload[:scheduling] || response_payload["scheduling"])
+            normalized = normalize_scheduling(sched)
+            response_payload.delete("scheduling")
+            response_payload[:scheduling] = normalized
+          end
+
+          { id: resp[:id], name: resp[:name], response: response_payload }
+        end
+
+        def normalize_scheduling(value)
+          value_str = value.to_s.upcase
+          unless VALID_SCHEDULING.include?(value_str)
+            raise ArgumentError,
+                  "scheduling must be one of: #{VALID_SCHEDULING.join(', ')} (got #{value.inspect})"
+          end
+          value_str
+        end
+
 
         def normalize_model_name(model)
           model.start_with?("models/") ? model : "models/#{model}"

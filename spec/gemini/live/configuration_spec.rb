@@ -6,7 +6,7 @@ RSpec.describe Gemini::Live::Configuration do
       subject(:config) { described_class.new }
 
       it "sets default model" do
-        expect(config.model).to eq("gemini-2.5-flash-native-audio-preview-12-2025")
+        expect(config.model).to eq("gemini-2.5-flash-live-preview")
       end
 
       it "sets default response modality to TEXT" do

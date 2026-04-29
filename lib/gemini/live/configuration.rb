@@ -12,7 +12,7 @@ module Gemini
 
       VALID_MODALITIES = %w[TEXT AUDIO].freeze
       VALID_VOICES = %w[Puck Charon Kore Fenrir Aoede Leda Orus Zephyr].freeze
-      DEFAULT_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+      DEFAULT_MODEL = "gemini-2.5-flash-live-preview"
 
       def initialize(
         model: DEFAULT_MODEL,

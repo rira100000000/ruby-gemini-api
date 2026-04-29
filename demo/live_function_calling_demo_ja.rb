@@ -1,43 +1,43 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Demo: Gemini Live API - Function Calling
+# デモ: Gemini Live API - Function Calling
 #
-# This demo shows how to use function calling with the Live API.
+# Live API で Function Calling を使う方法を示すデモです。
 #
-# Usage:
+# 使い方:
 #   export GEMINI_API_KEY=your_api_key
-#   ruby demo/live_function_calling_demo.rb
+#   ruby demo/live_function_calling_demo_ja.rb
 
 require "bundler/setup"
 require "gemini"
 
 api_key = ENV["GEMINI_API_KEY"]
 unless api_key
-  puts "Error: GEMINI_API_KEY environment variable not set"
+  puts "エラー: 環境変数 GEMINI_API_KEY が設定されていません"
   exit 1
 end
 
 client = Gemini::Client.new(api_key)
 
-# Define function tools
+# Function tools を定義
 tools = [
   {
     functionDeclarations: [
       {
         name: "get_weather",
-        description: "Get the current weather for a location",
+        description: "指定した場所の現在の天気を取得します",
         parameters: {
           type: "object",
           properties: {
             location: {
               type: "string",
-              description: "The city name, e.g. Tokyo, New York"
+              description: "都市名（例: 東京、ニューヨーク）"
             },
             unit: {
               type: "string",
               enum: ["celsius", "fahrenheit"],
-              description: "Temperature unit"
+              description: "温度の単位"
             }
           },
           required: ["location"]
@@ -45,13 +45,13 @@ tools = [
       },
       {
         name: "get_time",
-        description: "Get the current time for a timezone",
+        description: "指定したタイムゾーンの現在時刻を取得します",
         parameters: {
           type: "object",
           properties: {
             timezone: {
               type: "string",
-              description: "The timezone, e.g. Asia/Tokyo, America/New_York"
+              description: "タイムゾーン（例: Asia/Tokyo, America/New_York）"
             }
           },
           required: ["timezone"]
@@ -61,9 +61,8 @@ tools = [
   }
 ]
 
-# Simulated function implementations
+# 関数の擬似実装
 def get_weather(location, unit = "celsius")
-  # In a real app, this would call a weather API
   temp = rand(15..30)
   temp = (temp * 9 / 5) + 32 if unit == "fahrenheit"
   unit_symbol = unit == "celsius" ? "C" : "F"
@@ -71,31 +70,30 @@ def get_weather(location, unit = "celsius")
     location: location,
     temperature: temp,
     unit: unit_symbol,
-    condition: ["sunny", "cloudy", "rainy"].sample
+    condition: ["晴れ", "曇り", "雨"].sample
   }
 end
 
 def get_time(timezone)
-  # In a real app, this would use proper timezone handling
   require "time"
   now = Time.now.utc
   { timezone: timezone, time: now.strftime("%Y-%m-%d %H:%M:%S UTC") }
 end
 
-puts "Connecting to Gemini Live API with Function Calling..."
+puts "Gemini Live API に接続中（Function Calling 有効）..."
 
 begin
   client.live.connect(
     model: "gemini-2.5-flash-live-preview",
     response_modality: "TEXT",
     tools: tools,
-    system_instruction: "You are a helpful assistant. Use the available functions to get real-time information when asked about weather or time."
+    system_instruction: "あなたは親切なアシスタントです。天気や時刻について質問されたら、利用可能な関数を使ってリアルタイム情報を取得してください。"
   ) do |session|
     setup_complete = false
 
     session.on(:setup_complete) do
       setup_complete = true
-      puts "Connected! Function calling enabled."
+      puts "接続完了。Function Calling が有効になりました。"
       puts "-" * 40
     end
 
@@ -108,11 +106,11 @@ begin
     end
 
     session.on(:tool_call) do |function_calls|
-      puts "\n[Tool Call Received]"
+      puts "\n[Tool Call を受信]"
 
       responses = function_calls.map do |call|
-        puts "  Function: #{call[:name]}"
-        puts "  Args: #{call[:args]}"
+        puts "  関数名: #{call[:name]}"
+        puts "  引数: #{call[:args]}"
 
         result = case call[:name]
                  when "get_weather"
@@ -123,10 +121,10 @@ begin
                  when "get_time"
                    get_time(call[:args]["timezone"] || call[:args][:timezone])
                  else
-                   { error: "Unknown function: #{call[:name]}" }
+                   { error: "未知の関数: #{call[:name]}" }
                  end
 
-        puts "  Result: #{result}"
+        puts "  結果: #{result}"
 
         {
           id: call[:id],
@@ -135,19 +133,19 @@ begin
         }
       end
 
-      puts "[Sending Tool Response]"
+      puts "[Tool Response を送信]"
       session.send_tool_response(responses)
     end
 
     session.on(:error) do |error|
-      puts "\nError: #{error.message}"
+      puts "\nエラー: #{error.message}"
     end
 
     session.on(:close) do |code, reason|
-      puts "\nConnection closed. Code: #{code}, Reason: #{reason}"
+      puts "\n接続終了。Code: #{code}, Reason: #{reason}"
     end
 
-    # Wait for setup
+    # セットアップ完了を待つ
     timeout = 10
     elapsed = 0
     until setup_complete || elapsed >= timeout
@@ -156,25 +154,25 @@ begin
     end
 
     unless setup_complete
-      puts "Error: Setup did not complete"
+      puts "エラー: タイムアウト内にセットアップが完了しませんでした"
       exit 1
     end
 
-    # Ask about weather
-    puts "You: What's the weather like in Tokyo?"
-    session.send_text("What's the weather like in Tokyo?")
+    # 天気を聞く
+    puts "あなた: 東京の天気はどう？"
+    session.send_text("東京の天気はどう？")
     sleep 8
 
     puts "\n"
-    puts "You: What time is it in New York?"
-    session.send_text("What time is it in New York?")
+    puts "あなた: ニューヨークは今何時？"
+    session.send_text("ニューヨークは今何時？")
     sleep 8
   end
 rescue Interrupt
-  puts "\nInterrupted by user"
-rescue => e
-  puts "Error: #{e.class}: #{e.message}"
+  puts "\nユーザー操作により中断"
+rescue StandardError => e
+  puts "エラー: #{e.class}: #{e.message}"
   puts e.backtrace.first(5).join("\n")
 end
 
-puts "\nDemo completed."
+puts "\nデモが完了しました。"
