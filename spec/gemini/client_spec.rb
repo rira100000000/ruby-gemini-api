@@ -269,7 +269,7 @@ RSpec.describe Gemini::Client do
   end
 
   describe "#embeddings" do
-    let(:model) { "text-embedding-model" }
+    let(:model) { "gemini-embedding-001" }
     let(:response_body) do
       {
         "embedding" => {
@@ -283,11 +283,47 @@ RSpec.describe Gemini::Client do
       allow(response_instance).to receive(:raw_data).and_return(response_body)
     end
 
-    it "sends an embedContent request and returns Response object" do
+    it "sends an embedContent request using the default model and returns Response object" do
       stub_request(:post, "#{base_url}/models/#{model}:embedContent?key=#{api_key}")
         .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
-        
+
       response = client.embeddings(parameters: { content: { parts: [{ text: "Embed this text" }] } })
+      expect(response).to be(response_instance)
+    end
+
+    it "strips the models/ prefix when given a fully qualified model name" do
+      stub_request(:post, "#{base_url}/models/#{model}:embedContent?key=#{api_key}")
+        .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+      response = client.embeddings(parameters: {
+        model: "models/#{model}",
+        content: { parts: [{ text: "Embed this text" }] }
+      })
+      expect(response).to be(response_instance)
+    end
+  end
+
+  describe "#embed_content" do
+    let(:model) { "gemini-embedding-001" }
+    let(:response_body) do
+      { "embedding" => { "values" => [0.1, 0.2, 0.3] } }
+    end
+
+    before do
+      allow(Gemini::Response).to receive(:new).and_return(response_instance)
+      allow(response_instance).to receive(:raw_data).and_return(response_body)
+    end
+
+    it "delegates to embeddings_api.create with a String input" do
+      stub_request(:post, "#{base_url}/models/#{model}:embedContent?key=#{api_key}")
+        .with(
+          body: hash_including(
+            content: { parts: [{ text: "Hello world" }] }
+          )
+        )
+        .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+      response = client.embed_content("Hello world")
       expect(response).to be(response_instance)
     end
   end

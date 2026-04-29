@@ -75,6 +75,11 @@ module Gemini
       @live ||= Gemini::Live.new(client: self)
     end
 
+    # Embeddings APIアクセサ
+    def embeddings_api
+      @embeddings_api ||= Gemini::Embeddings.new(client: self)
+    end
+
     def reset_headers
       @extra_headers = {}
     end
@@ -117,10 +122,25 @@ module Gemini
       end
     end
     
-    # Method corresponding to OpenAI's embeddings
+    # Generate embeddings for the given input.
+    # input can be a String (single embed) or Array of Strings (batch embed).
+    # Supports task_type, title (RETRIEVAL_DOCUMENT only), and output_dimensionality.
+    def embed_content(input, model: Gemini::Embeddings::DEFAULT_MODEL, task_type: nil,
+                      title: nil, output_dimensionality: nil, **parameters)
+      embeddings_api.create(
+        input: input,
+        model: model,
+        task_type: task_type,
+        title: title,
+        output_dimensionality: output_dimensionality,
+        **parameters
+      )
+    end
+
+    # Method corresponding to OpenAI's embeddings (kept for compatibility)
     def embeddings(parameters: {})
-      model = parameters.delete(:model) || "text-embedding-model"
-      path = "models/#{model}:embedContent"
+      model = parameters.delete(:model) || Gemini::Embeddings::DEFAULT_MODEL
+      path = "models/#{model.to_s.delete_prefix("models/")}:embedContent"
       response = json_post(path: path, parameters: parameters)
       Gemini::Response.new(response)
     end

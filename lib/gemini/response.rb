@@ -70,9 +70,49 @@ module Gemini
     
     # Check if response is valid
     def valid?
-      !@raw_data.nil? && 
-      ((@raw_data.key?("candidates") && !@raw_data["candidates"].empty?) || 
-       (@raw_data.key?("predictions") && !@raw_data["predictions"].empty?))
+      !@raw_data.nil? &&
+      ((@raw_data.key?("candidates") && !@raw_data["candidates"].empty?) ||
+       (@raw_data.key?("predictions") && !@raw_data["predictions"].empty?) ||
+       embedding_response?)
+    end
+
+    # Check if the raw response contains embedding data
+    def embedding_response?
+      return false if @raw_data.nil?
+      (@raw_data.key?("embedding") && !@raw_data["embedding"].nil?) ||
+        (@raw_data.key?("embeddings") && @raw_data["embeddings"].is_a?(Array) && !@raw_data["embeddings"].empty?)
+    end
+
+    # Get the embedding values as an Array of Floats.
+    # For single embedContent responses returns the values array.
+    # For batchEmbedContents responses returns the first embedding's values.
+    def embedding
+      return nil unless @raw_data
+      if @raw_data["embedding"].is_a?(Hash)
+        @raw_data["embedding"]["values"]
+      elsif @raw_data["embeddings"].is_a?(Array) && @raw_data["embeddings"].first.is_a?(Hash)
+        @raw_data["embeddings"].first["values"]
+      end
+    end
+
+    # Get all embedding value arrays for batch responses.
+    # Returns an Array of Arrays of Floats.
+    # For single embedContent responses, returns a single-element array.
+    def embeddings
+      return [] unless @raw_data
+      if @raw_data["embeddings"].is_a?(Array)
+        @raw_data["embeddings"].map { |e| e["values"] }.compact
+      elsif @raw_data["embedding"].is_a?(Hash) && @raw_data["embedding"]["values"]
+        [@raw_data["embedding"]["values"]]
+      else
+        []
+      end
+    end
+
+    # Get the dimensionality (length) of the first embedding vector
+    def embedding_dimension
+      values = embedding
+      values.is_a?(Array) ? values.length : 0
     end
     
     # Get error message if any

@@ -30,6 +30,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Structured output with JSON schema and enum constraints
 - Document processing (PDFs and other formats)
 - Context caching for efficient processing
+- Text embeddings (single and batch) with task type, title, and output dimensionality control
 
 ### Function Calling
 
@@ -992,6 +993,104 @@ end
 
 For a complete example of context caching, check out the `demo/document_cache_demo.rb` file.
 
+### Embeddings
+
+You can generate text embeddings using the Gemini Embeddings API. Embeddings are vector representations of text that can be used for semantic similarity, classification, clustering, retrieval, and more.
+
+#### Single Embedding
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+response = client.embed_content(
+  "What is the meaning of life?",
+  model: "gemini-embedding-001"
+)
+
+if response.success?
+  puts "Dimension: #{response.embedding_dimension}"
+  puts "Vector (first 5 values): #{response.embedding.first(5).inspect}"
+end
+```
+
+#### Batch Embeddings
+
+Pass an Array of strings to embed multiple texts in a single batch request (uses `batchEmbedContents` under the hood):
+
+```ruby
+response = client.embed_content(
+  [
+    "I love programming in Ruby.",
+    "Rubies are red gemstones.",
+    "Python is also a programming language."
+  ],
+  model: "gemini-embedding-001",
+  task_type: :semantic_similarity
+)
+
+response.embeddings.each_with_index do |values, i|
+  puts "Embedding #{i}: dimension=#{values.size}"
+end
+```
+
+#### Task Type, Title, and Output Dimensionality
+
+You can specify a `task_type` to optimize the embedding for a particular downstream task. When `task_type: :retrieval_document` is used, you may also pass a `title`. Use `output_dimensionality` to truncate the vector length (recommended values: 768, 1536, 3072).
+
+```ruby
+response = client.embed_content(
+  "Ruby is a dynamic, open-source programming language.",
+  model: "gemini-embedding-001",
+  task_type: :retrieval_document,
+  title: "Ruby Overview",
+  output_dimensionality: 768
+)
+```
+
+Supported task types:
+
+- `RETRIEVAL_QUERY`
+- `RETRIEVAL_DOCUMENT`
+- `SEMANTIC_SIMILARITY`
+- `CLASSIFICATION`
+- `CLUSTERING`
+- `QUESTION_ANSWERING`
+- `FACT_VERIFICATION`
+- `CODE_RETRIEVAL_QUERY`
+
+You can pass them as a String, Symbol, or in any case (e.g. `:retrieval_query`, `"RETRIEVAL_QUERY"`).
+
+#### Direct Access via `embeddings_api`
+
+For more control, you can call the embeddings API directly:
+
+```ruby
+# Single
+client.embeddings_api.create(input: "Hello", model: "gemini-embedding-001")
+
+# Batch
+client.embeddings_api.batch_create(
+  inputs: ["First", "Second", "Third"],
+  model: "gemini-embedding-001",
+  task_type: :clustering
+)
+```
+
+#### Response Helpers
+
+The Response object exposes a few helpers for embedding payloads:
+
+```ruby
+response.embedding            # First embedding values (Array of Floats)
+response.embeddings           # All embedding value arrays (Array of Arrays)
+response.embedding_dimension  # Length of the first embedding vector
+response.embedding_response?  # true if the payload contains embedding data
+```
+
+A complete example is available in `demo/embeddings_demo.rb`.
+
 ### Structured Output with JSON Schema
 
 You can request responses in structured JSON format by specifying a JSON schema:
@@ -1232,6 +1331,7 @@ The gem includes several demo applications that showcase its functionality:
 - `demo/document_chat_demo.rb` - Document processing
 - `demo/document_conversation_demo.rb` - Conversation with documents
 - `demo/document_cache_demo.rb` - Document caching
+- `demo/embeddings_demo.rb` - Text embeddings (single and batch)
 
 Run the demos with:
 
@@ -1286,6 +1386,9 @@ ruby demo/document_conversation_demo.rb path/to/document.pdf
 
 # Document caching and querying
 ruby demo/document_cache_demo.rb path/to/document.pdf
+
+# Text embeddings (single and batch)
+ruby demo/embeddings_demo.rb
 ```
 
 ## Models
