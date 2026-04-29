@@ -5,6 +5,14 @@
 #
 # This demo shows how to use the Live API for real-time text conversations.
 #
+# Note: As of writing, no Live API model deployed on bidiGenerateContent
+# accepts the TEXT response modality - the only currently-working models
+# are the native-audio variants which require AUDIO modality. This demo is
+# kept here for the day a TEXT-capable Live model (e.g.,
+# gemini-2.5-flash-live-preview, listed in the public docs) is rolled out.
+# In the meantime, see demo/live_audio_demo.rb and
+# demo/live_function_calling_demo.rb for working examples.
+#
 # Usage:
 #   export GEMINI_API_KEY=your_api_key
 #   ruby demo/live_text_demo.rb

@@ -998,37 +998,48 @@ For a complete example of context caching, check out the `demo/document_cache_de
 
 The Gemini Live API provides bidirectional WebSocket-based real-time conversations with audio, video, and text support. The library wraps the protocol behind an event-driven `Gemini::Live::Session`.
 
-#### Basic Text Conversation
+#### Basic Audio Conversation
+
+The default model (`gemini-2.5-flash-native-audio-preview-12-2025`) responds with audio. You receive Base64-encoded 24 kHz 16-bit PCM chunks via the `:audio` event.
 
 ```ruby
 require 'gemini'
+require 'base64'
 
 client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 client.live.connect(
-  model: "gemini-2.5-flash-live-preview",
-  response_modality: "TEXT",
-  system_instruction: "You are a helpful assistant."
+  response_modality: "AUDIO",
+  voice_name: "Kore",
+  system_instruction: "You are a helpful assistant. Be brief."
 ) do |session|
   setup_complete = false
+  audio_chunks = []
 
   session.on(:setup_complete) { setup_complete = true }
-  session.on(:text)           { |text| print text }
-  session.on(:turn_complete)  { puts }
+  session.on(:audio)          { |data, _mime| audio_chunks << Base64.decode64(data) }
+  session.on(:turn_complete)  { puts "[#{audio_chunks.sum(&:bytesize)} bytes]" }
   session.on(:error)          { |e| puts "Error: #{e.message}" }
 
   sleep 0.05 until setup_complete
 
   session.send_text("What is the capital of Japan?")
-  sleep 5
+  sleep 8
 end
 ```
+
+For text-only responses, see the note below about Live model availability.
 
 #### Function Calling (Synchronous)
 
 The Live API supports function calling. Define your tools, register a `:tool_call` handler, and reply with `session.send_tool_response`.
 
+> **Note on currently-deployed Live models**
+> The public docs list `gemini-2.5-flash-live-preview` as the recommended Live model, but as of writing it is not yet deployed on the `bidiGenerateContent` endpoint, and `gemini-3.1-flash-live-preview` returns an internal error. The only currently-working combination for function calling is the **native-audio preview model with the AUDIO response modality** (which is also what the `Configuration::DEFAULT_MODEL` points to). When TEXT-modality Live models are rolled out, the same code below works by changing `response_modality:` and dropping `voice_name:`.
+
 ```ruby
+require 'base64'
+
 tools = [
   {
     functionDeclarations: [
@@ -1047,13 +1058,15 @@ tools = [
   }
 ]
 
+audio_chunks = []
+
 client.live.connect(
-  model: "gemini-2.5-flash-live-preview",
-  response_modality: "TEXT",
+  response_modality: "AUDIO",
+  voice_name: "Kore",
   tools: tools,
   system_instruction: "Use the available functions when asked about weather."
 ) do |session|
-  session.on(:text) { |text| print text }
+  session.on(:audio) { |data, _mime| audio_chunks << Base64.decode64(data) }
 
   session.on(:tool_call) do |function_calls|
     responses = function_calls.map do |call|
@@ -1068,8 +1081,10 @@ client.live.connect(
 
   sleep 0.5  # wait for setup
   session.send_text("What's the weather in Tokyo?")
-  sleep 8
+  sleep 18
 end
+
+# audio_chunks now contains 24 kHz, 16-bit PCM mono audio of the spoken reply.
 ```
 
 A complete example is in `demo/live_function_calling_demo.rb`.
@@ -1122,12 +1137,14 @@ end
 
 #### Supported Live API Models for Tools
 
+The public Live API tools docs list:
+
 | Model | Sync Function Calling | Async (NON_BLOCKING) | Google Search |
 |---|---|---|---|
-| `gemini-2.5-flash-live-preview` (default) | ✓ | ✓ | ✓ |
+| `gemini-2.5-flash-live-preview` | ✓ | ✓ | ✓ |
 | `gemini-3.1-flash-live-preview` | ✓ | — | ✓ |
 
-The native-audio preview models (e.g. `gemini-2.5-flash-native-audio-preview-12-2025`) are tuned for low-latency speech I/O and are not officially listed for tool support — use `gemini-2.5-flash-live-preview` when you need function calling.
+In practice, on the `bidiGenerateContent` endpoint as of writing, only the native-audio preview variants are deployed and respond successfully. The library defaults to `gemini-2.5-flash-native-audio-preview-12-2025`, which works with **AUDIO** response modality and accepts function-calling tools. The two Live preview models above are recognized by the documentation but currently return errors when contacted directly. Once they are rolled out, the same code in this README works against them with `response_modality: "TEXT"`.
 
 Demos available:
 

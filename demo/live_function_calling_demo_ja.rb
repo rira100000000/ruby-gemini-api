@@ -3,7 +3,13 @@
 
 # デモ: Gemini Live API - Function Calling
 #
-# Live API で Function Calling を使う方法を示すデモです。
+# 注意: 現時点で Function Calling が確実に動作する Live API のモデルは、
+# native-audio プレビューモデル + AUDIO モダリティの組み合わせのみです。
+# 公式ドキュメントが推奨する gemini-2.5-flash-live-preview は
+# bidiGenerateContent エンドポイントにまだデプロイされておらず、
+# gemini-3.1-flash-live-preview は内部エラーになります。
+# そのため本デモは AUDIO モダリティで動作し、応答音声は WAV に書き出すと
+# 同時に sox の `play` コマンドが利用可能であれば再生します。
 #
 # 使い方:
 #   export GEMINI_API_KEY=your_api_key
@@ -11,6 +17,8 @@
 
 require "bundler/setup"
 require "gemini"
+require "base64"
+require "tempfile"
 
 api_key = ENV["GEMINI_API_KEY"]
 unless api_key
@@ -20,7 +28,7 @@ end
 
 client = Gemini::Client.new(api_key)
 
-# Function tools を定義
+# Function tool を定義
 tools = [
   {
     functionDeclarations: [
@@ -30,13 +38,10 @@ tools = [
         parameters: {
           type: "object",
           properties: {
-            location: {
-              type: "string",
-              description: "都市名（例: 東京、ニューヨーク）"
-            },
+            location: { type: "string", description: "都市名（例: 東京、ニューヨーク）" },
             unit: {
               type: "string",
-              enum: ["celsius", "fahrenheit"],
+              enum: %w[celsius fahrenheit],
               description: "温度の単位"
             }
           },
@@ -49,10 +54,7 @@ tools = [
         parameters: {
           type: "object",
           properties: {
-            timezone: {
-              type: "string",
-              description: "タイムゾーン（例: Asia/Tokyo, America/New_York）"
-            }
+            timezone: { type: "string", description: "タイムゾーン（例: Asia/Tokyo, America/New_York）" }
           },
           required: ["timezone"]
         }
@@ -80,20 +82,45 @@ def get_time(timezone)
   { timezone: timezone, time: now.strftime("%Y-%m-%d %H:%M:%S UTC") }
 end
 
+# 24kHz モノラル PCM-16 を WAV にラップ
+def write_wav(pcm_bytes, path, sample_rate: 24000)
+  data_size = pcm_bytes.bytesize
+  byte_rate = sample_rate * 2 # 16-bit mono
+  header = +"RIFF"
+  header << [36 + data_size].pack("V")
+  header << "WAVE"
+  header << "fmt " << [16, 1, 1, sample_rate, byte_rate, 2, 16].pack("VvvVVvv")
+  header << "data" << [data_size].pack("V")
+  File.binwrite(path, header + pcm_bytes)
+end
+
+def play_audio(pcm_bytes)
+  return false if pcm_bytes.empty?
+  Tempfile.create(["gemini-fc", ".wav"]) do |tmp|
+    write_wav(pcm_bytes, tmp.path)
+    if system("which play > /dev/null 2>&1")
+      system("play", "-q", tmp.path, out: File::NULL, err: File::NULL)
+      return true
+    end
+  end
+  false
+end
+
 puts "Gemini Live API に接続中（Function Calling 有効）..."
 
 begin
   client.live.connect(
-    model: "gemini-2.5-flash-live-preview",
-    response_modality: "TEXT",
+    response_modality: "AUDIO",
+    voice_name: "Kore",
     tools: tools,
-    system_instruction: "あなたは親切なアシスタントです。天気や時刻について質問されたら、利用可能な関数を使ってリアルタイム情報を取得してください。"
+    system_instruction: "あなたは親切なアシスタントです。天気や時刻について聞かれたら、利用可能な関数を使ってリアルタイム情報を取得してください。応答は簡潔にしてください。"
   ) do |session|
     setup_complete = false
+    audio_chunks = []
 
     session.on(:setup_complete) do
       setup_complete = true
-      puts "接続完了。Function Calling が有効になりました。"
+      puts "接続完了。Function Calling 有効（AUDIO モダリティ）。"
       puts "-" * 40
     end
 
@@ -101,40 +128,49 @@ begin
       print text
     end
 
-    session.on(:turn_complete) do
-      puts "\n" + "-" * 40
+    session.on(:audio) do |data, _mime|
+      audio_chunks << Base64.decode64(data)
     end
 
     session.on(:tool_call) do |function_calls|
       puts "\n[Tool Call を受信]"
 
       responses = function_calls.map do |call|
+        args = call[:args] || {}
         puts "  関数名: #{call[:name]}"
-        puts "  引数: #{call[:args]}"
+        puts "  引数: #{args}"
 
         result = case call[:name]
                  when "get_weather"
-                   get_weather(
-                     call[:args]["location"] || call[:args][:location],
-                     call[:args]["unit"] || call[:args][:unit] || "celsius"
-                   )
+                   get_weather(args["location"] || args[:location], args["unit"] || args[:unit] || "celsius")
                  when "get_time"
-                   get_time(call[:args]["timezone"] || call[:args][:timezone])
+                   get_time(args["timezone"] || args[:timezone])
                  else
                    { error: "未知の関数: #{call[:name]}" }
                  end
 
         puts "  結果: #{result}"
-
-        {
-          id: call[:id],
-          name: call[:name],
-          response: result
-        }
+        { id: call[:id], name: call[:name], response: result }
       end
 
       puts "[Tool Response を送信]"
       session.send_tool_response(responses)
+    end
+
+    session.on(:turn_complete) do
+      pcm = audio_chunks.join
+      audio_chunks.clear
+      puts "\n[ターン完了; 受信した音声バイト数: #{pcm.bytesize}]"
+      if pcm.bytesize.positive?
+        if play_audio(pcm)
+          puts "[sox で音声を再生しました]"
+        else
+          out = "live_fc_response_#{Time.now.to_i}.wav"
+          write_wav(pcm, out)
+          puts "[sox が見つからないため #{out} に書き出しました]"
+        end
+      end
+      puts "-" * 40
     end
 
     session.on(:error) do |error|
@@ -154,19 +190,17 @@ begin
     end
 
     unless setup_complete
-      puts "エラー: タイムアウト内にセットアップが完了しませんでした"
+      puts "エラー: タイムアウト #{timeout}秒以内にセットアップが完了しませんでした"
       exit 1
     end
 
-    # 天気を聞く
     puts "あなた: 東京の天気はどう？"
     session.send_text("東京の天気はどう？")
-    sleep 8
+    sleep 18
 
-    puts "\n"
-    puts "あなた: ニューヨークは今何時？"
+    puts "\nあなた: ニューヨークは今何時？"
     session.send_text("ニューヨークは今何時？")
-    sleep 8
+    sleep 18
   end
 rescue Interrupt
   puts "\nユーザー操作により中断"

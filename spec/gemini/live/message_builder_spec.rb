@@ -8,7 +8,7 @@ RSpec.describe Gemini::Live::MessageBuilder do
       it "builds correct setup message" do
         message = described_class.setup(config)
 
-        expect(message[:setup][:model]).to eq("models/gemini-2.5-flash-live-preview")
+        expect(message[:setup][:model]).to eq("models/gemini-2.5-flash-native-audio-preview-12-2025")
         expect(message[:setup][:generationConfig][:responseModalities]).to eq(["TEXT"])
       end
     end

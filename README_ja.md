@@ -1004,37 +1004,48 @@ end
 
 Gemini Live API は WebSocket による双方向リアルタイム会話を提供し、音声・動画・テキストに対応しています。本ライブラリではプロトコルをイベント駆動の `Gemini::Live::Session` でラップしています。
 
-#### テキスト会話の基本
+#### 音声会話の基本
+
+デフォルトモデル（`gemini-2.5-flash-native-audio-preview-12-2025`）は音声で応答します。Base64 エンコードされた 24 kHz 16-bit PCM チャンクが `:audio` イベントで届きます。
 
 ```ruby
 require 'gemini'
+require 'base64'
 
 client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 client.live.connect(
-  model: "gemini-2.5-flash-live-preview",
-  response_modality: "TEXT",
-  system_instruction: "あなたは親切なアシスタントです。"
+  response_modality: "AUDIO",
+  voice_name: "Kore",
+  system_instruction: "あなたは親切なアシスタントです。簡潔に答えてください。"
 ) do |session|
   setup_complete = false
+  audio_chunks = []
 
   session.on(:setup_complete) { setup_complete = true }
-  session.on(:text)           { |text| print text }
-  session.on(:turn_complete)  { puts }
+  session.on(:audio)          { |data, _mime| audio_chunks << Base64.decode64(data) }
+  session.on(:turn_complete)  { puts "[#{audio_chunks.sum(&:bytesize)} bytes]" }
   session.on(:error)          { |e| puts "エラー: #{e.message}" }
 
   sleep 0.05 until setup_complete
 
   session.send_text("日本の首都は？")
-  sleep 5
+  sleep 8
 end
 ```
+
+テキスト応答については、後述の Live モデルの提供状況に関する注意を参照してください。
 
 #### Function Calling（同期）
 
 Live API は Function Calling に対応しています。tools を定義し、`:tool_call` ハンドラで関数を実行して `session.send_tool_response` で結果を返します。
 
+> **現状デプロイされている Live モデルに関する注意**
+> 公式ドキュメントは `gemini-2.5-flash-live-preview` を Live API の推奨モデルとして紹介していますが、執筆時点で `bidiGenerateContent` エンドポイントにまだデプロイされていません。`gemini-3.1-flash-live-preview` も内部エラーを返します。Function Calling が現状で確実に動作する組み合わせは **native-audio プレビューモデル + AUDIO モダリティ** のみです（`Configuration::DEFAULT_MODEL` もこれを指しています）。テキスト応答対応の Live モデルが提供開始されたら、下記コードの `response_modality:` を変えるだけで動きます。
+
 ```ruby
+require 'base64'
+
 tools = [
   {
     functionDeclarations: [
@@ -1053,13 +1064,15 @@ tools = [
   }
 ]
 
+audio_chunks = []
+
 client.live.connect(
-  model: "gemini-2.5-flash-live-preview",
-  response_modality: "TEXT",
+  response_modality: "AUDIO",
+  voice_name: "Kore",
   tools: tools,
   system_instruction: "天気について聞かれたら関数を使ってください。"
 ) do |session|
-  session.on(:text) { |text| print text }
+  session.on(:audio) { |data, _mime| audio_chunks << Base64.decode64(data) }
 
   session.on(:tool_call) do |function_calls|
     responses = function_calls.map do |call|
@@ -1074,8 +1087,10 @@ client.live.connect(
 
   sleep 0.5  # セットアップ待ち
   session.send_text("東京の天気は？")
-  sleep 8
+  sleep 18
 end
+
+# audio_chunks に 24kHz, 16-bit PCM モノラルの音声データが入っています。
 ```
 
 完全な例は `demo/live_function_calling_demo_ja.rb` にあります。
@@ -1128,12 +1143,14 @@ end
 
 #### Tools 対応 Live API モデル
 
+公式 Live API の tools ドキュメントには次のモデルが記載されています:
+
 | モデル | 同期 FC | 非同期 (NON_BLOCKING) | Google Search |
 |---|---|---|---|
-| `gemini-2.5-flash-live-preview`（デフォルト） | ✓ | ✓ | ✓ |
+| `gemini-2.5-flash-live-preview` | ✓ | ✓ | ✓ |
 | `gemini-3.1-flash-live-preview` | ✓ | — | ✓ |
 
-native audio 系プレビューモデル（例: `gemini-2.5-flash-native-audio-preview-12-2025`）は低レイテンシ音声入出力に最適化されたモデルで、tools サポートは公式に明示されていません。Function Calling を使う場合は `gemini-2.5-flash-live-preview` を使用してください。
+ただし執筆時点で `bidiGenerateContent` エンドポイント上に実際にデプロイされて動作するのは native-audio 系のみです。本ライブラリのデフォルトは `gemini-2.5-flash-native-audio-preview-12-2025` で、**AUDIO** モダリティ + Function Calling tools の組み合わせで動作することを確認しています。上記2つのプレビューモデルはドキュメントに記載があるものの、現状直接呼び出すとエラーになります。提供開始されれば `response_modality: "TEXT"` でこの README のコードがそのまま使えるようになります。
 
 利用可能な Live API デモ:
 

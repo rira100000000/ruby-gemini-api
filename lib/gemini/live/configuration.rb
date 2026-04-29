@@ -12,7 +12,12 @@ module Gemini
 
       VALID_MODALITIES = %w[TEXT AUDIO].freeze
       VALID_VOICES = %w[Puck Charon Kore Fenrir Aoede Leda Orus Zephyr].freeze
-      DEFAULT_MODEL = "gemini-2.5-flash-live-preview"
+      # NOTE: gemini-2.5-flash-live-preview is listed in the public Live API
+      # tools documentation as the recommended model, but is not currently
+      # deployed (returns "model not found" on bidiGenerateContent). The
+      # native-audio preview model is the only Live model on which function
+      # calling currently works in practice (with AUDIO modality).
+      DEFAULT_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 
       def initialize(
         model: DEFAULT_MODEL,
