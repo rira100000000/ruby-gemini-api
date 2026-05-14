@@ -32,6 +32,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Context caching for efficient processing
 - Text embeddings (single and batch) with task type, title, and output dimensionality control
 - Token counting (`countTokens`) for prompts, chat history, and full requests with system instruction / tools / cached content
+- Speech generation (TTS) with 30 prebuilt voices, single-speaker and multi-speaker modes, and one-line WAV file output
 - Live API: real-time bidirectional conversations with text/audio/video and function calling (sync and async)
 
 ### Function Calling
@@ -1345,6 +1346,99 @@ response.count_tokens_response?      # true if the payload is a countTokens resp
 ```
 
 A complete example is available in `demo/count_tokens_demo.rb`.
+
+### Speech Generation (TTS)
+
+Generate spoken audio from text using Gemini's TTS preview models. The API returns 24 kHz, 16-bit, mono PCM (L16) audio; `Response#save_audio` wraps it in a RIFF/WAVE header so the result is directly playable.
+
+#### Single-Speaker
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+response = client.generate_speech(
+  "Say cheerfully: Have a wonderful day!",
+  voice: "Kore"
+)
+
+if response.success?
+  response.save_audio("hello.wav")
+  puts response.audio_mime_type # => "audio/L16;codec=pcm;rate=24000"
+end
+```
+
+Phrase the prompt as an instruction to read text aloud (`Say ...:` / `Read the following:`); a bare phrase like `"Hello"` is treated as a chat message and rejected with a 400 error.
+
+#### Multi-Speaker
+
+Provide a `multi_speaker:` array to assign different voices to named speakers (up to 2 speakers in the current preview models). Reference the speakers by the same names in your prompt.
+
+```ruby
+script = <<~SCRIPT
+  TTS the following conversation between Joe and Jane:
+  Joe: How's it going today, Jane?
+  Jane: Not too bad, how about you?
+SCRIPT
+
+response = client.generate_speech(
+  script,
+  multi_speaker: [
+    { speaker: "Joe",  voice: "Kore" },
+    { speaker: "Jane", voice: "Puck" }
+  ]
+)
+
+response.save_audio("dialogue.wav")
+```
+
+#### Style Control
+
+You can steer tone, pace, and emotion in two ways.
+
+**1. Natural-language instruction** — describe the delivery as part of the prompt.
+
+```ruby
+client.generate_speech(
+  "Read this in a soft whisper: I have a secret... and you must never tell anyone.",
+  voice: "Zephyr"
+)
+```
+
+**2. Inline bracket tag** — put a directive like `[whispers]`, `[excited]`, `[laughs]`, `[sighs]`, `[shouting]`, etc. at the start of the text to apply that style to what follows.
+
+```ruby
+client.generate_speech(
+  "[whispers] I have a secret... and you must never tell anyone.",
+  voice: "Zephyr"
+)
+```
+
+Stick to **one style per call**: switching style mid-prompt (e.g. `[whispers] ... [excited] ...`) tends to leave the second segment in the first style or drop it entirely. If you need multiple styles, call `generate_speech` once per sentence and concatenate the audio yourself.
+
+#### Models and Voices
+
+- Default model: `gemini-2.5-flash-preview-tts` (override via `model:`)
+- Other models: `gemini-2.5-pro-preview-tts`, `gemini-3.1-flash-tts-preview`
+- 30 prebuilt voices are listed in `Gemini::TTS::VOICES` (Zephyr, Puck, Charon, Kore, Fenrir, Leda, Orus, Aoede, …). Unknown names raise `ArgumentError` at build time.
+
+#### Direct Access via `tts`
+
+```ruby
+client.tts.generate("Say hello.", voice: "Kore")
+```
+
+#### Response Helpers
+
+```ruby
+response.audio_data        # Base64-encoded PCM payload
+response.audio_mime_type   # e.g. "audio/L16;codec=pcm;rate=24000"
+response.audio_response?   # true if the payload contains audio inlineData
+response.save_audio(path)  # writes a playable .wav file and returns the path
+```
+
+A complete example is available in `demo/tts_demo.rb`.
 
 ### Structured Output with JSON Schema
 

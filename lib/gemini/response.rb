@@ -41,8 +41,82 @@ module Gemini
     # Get image parts (if any)
     def image_parts
       return [] unless valid?
-      
+
       parts.select { |part| part.key?("inline_data") && part["inline_data"]["mime_type"].start_with?("image/") }
+    end
+
+    # Get the first audio inlineData part (TTS responses use camelCase "inlineData")
+    def audio_part
+      return nil unless valid?
+
+      parts.find do |part|
+        data_key = part["inlineData"] || part["inline_data"]
+        next false unless data_key
+        mt = data_key["mimeType"] || data_key["mime_type"]
+        mt.is_a?(String) && mt.start_with?("audio/")
+      end
+    end
+
+    # Base64-encoded audio data from a TTS response
+    def audio_data
+      part = audio_part
+      return nil unless part
+      data_key = part["inlineData"] || part["inline_data"]
+      data_key["data"]
+    end
+
+    # MIME type of the audio payload (e.g. "audio/L16;codec=pcm;rate=24000")
+    def audio_mime_type
+      part = audio_part
+      return nil unless part
+      data_key = part["inlineData"] || part["inline_data"]
+      data_key["mimeType"] || data_key["mime_type"]
+    end
+
+    # True if the response contains audio inlineData
+    def audio_response?
+      !audio_part.nil?
+    end
+
+    # Save audio to a file. PCM (L16) payloads are wrapped in a WAV header so
+    # the result is directly playable; other audio MIME types are written as-is.
+    # Returns the written file path or nil if no audio is present.
+    def save_audio(filepath)
+      data_b64 = audio_data
+      return nil unless data_b64
+
+      require 'base64'
+      raw = Base64.strict_decode64(data_b64)
+      mime = audio_mime_type.to_s
+
+      if mime.include?("L16") || mime.include?("pcm")
+        rate = mime[/rate=(\d+)/, 1]&.to_i || 24000
+        channels = 1
+        bits_per_sample = 16
+        byte_rate = rate * channels * bits_per_sample / 8
+        block_align = channels * bits_per_sample / 8
+        data_size = raw.bytesize
+
+        header = +""
+        header << "RIFF"
+        header << [36 + data_size].pack("V")
+        header << "WAVE"
+        header << "fmt "
+        header << [16].pack("V")
+        header << [1].pack("v")
+        header << [channels].pack("v")
+        header << [rate].pack("V")
+        header << [byte_rate].pack("V")
+        header << [block_align].pack("v")
+        header << [bits_per_sample].pack("v")
+        header << "data"
+        header << [data_size].pack("V")
+
+        File.binwrite(filepath, header + raw)
+      else
+        File.binwrite(filepath, raw)
+      end
+      filepath
     end
     
     # Get all content with string representation

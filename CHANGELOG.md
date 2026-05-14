@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Added
+- TTS (speech generation) API support
+  - `client.tts.generate(text, voice:)` and `client.generate_speech(text, voice:)` shortcut
+  - Single-speaker mode via `voice:` and multi-speaker mode via `multi_speaker: [{ speaker:, voice: }, ...]`
+  - 30 prebuilt voices exposed as `Gemini::TTS::VOICES`
+  - Default model `gemini-2.5-flash-preview-tts` (override via `model:`)
+  - `Response` helpers: `#audio_data`, `#audio_mime_type`, `#audio_response?`, `#save_audio(path)` which auto-wraps L16 PCM in a RIFF/WAVE header
+  - Demos: `tts_demo.rb` / `tts_demo_ja.rb`
 - `countTokens` API support
   - `client.tokens.count(input, ...)` and `client.count_tokens(input, ...)` shortcut
   - Accepts String / Array / Hash inputs, full `contents:` array, plus optional `system_instruction:`, `tools:`, `generation_config:`, `cached_content:` (auto-wraps payload in `generateContentRequest` when extra fields are present)

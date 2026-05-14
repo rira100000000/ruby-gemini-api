@@ -85,6 +85,24 @@ module Gemini
       @tokens ||= Gemini::Tokens.new(client: self)
     end
 
+    # TTS (speech generation) APIアクセサ
+    def tts
+      @tts ||= Gemini::TTS.new(client: self)
+    end
+
+    # Convenience wrapper for TTS speech generation.
+    def generate_speech(text, voice: nil, multi_speaker: nil, model: Gemini::TTS::DEFAULT_MODEL,
+                        speech_config: nil, **parameters)
+      tts.generate(
+        text,
+        voice: voice,
+        multi_speaker: multi_speaker,
+        model: model,
+        speech_config: speech_config,
+        **parameters
+      )
+    end
+
     # Convenience wrapper for countTokens.
     # input can be a String, Array of parts/strings, Hash, or omitted when contents: is given.
     def count_tokens(input = nil, model: Gemini::Tokens::DEFAULT_MODEL, contents: nil,
