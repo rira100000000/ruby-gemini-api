@@ -31,6 +31,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Document processing (PDFs and other formats)
 - Context caching for efficient processing
 - Text embeddings (single and batch) with task type, title, and output dimensionality control
+- Token counting (`countTokens`) for prompts, chat history, and full requests with system instruction / tools / cached content
 - Live API: real-time bidirectional conversations with text/audio/video and function calling (sync and async)
 
 ### Function Calling
@@ -1262,6 +1263,88 @@ response.embedding_response?  # true if the payload contains embedding data
 ```
 
 A complete example is available in `demo/embeddings_demo.rb`.
+
+### Token Counting
+
+Estimate how many tokens an input would consume before sending it to a generation endpoint. Useful for cost/quota planning and for staying within a model's context window.
+
+#### Basic Usage
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+response = client.count_tokens("The quick brown fox jumps over the lazy dog.")
+
+puts response.count_tokens             # => 9 (totalTokens)
+puts response.prompt_tokens_details    # => [{"modality"=>"TEXT", "tokenCount"=>9}]
+```
+
+By default the request goes to `gemini-2.5-flash`. Override it with `model:`:
+
+```ruby
+client.count_tokens("Hello", model: "gemini-2.5-pro")
+```
+
+#### Multi-turn Chat History
+
+Pass a fully formed `contents:` array (the same shape used by `generateContent`) to count tokens for an entire conversation:
+
+```ruby
+response = client.count_tokens(
+  contents: [
+    { role: "user",  parts: [{ text: "Hi, my name is Bob." }] },
+    { role: "model", parts: [{ text: "Hi Bob!" }] },
+    { role: "user",  parts: [{ text: "What's the weather like today?" }] }
+  ]
+)
+```
+
+#### With System Instruction, Tools, or Cached Content
+
+When you include `system_instruction:`, `tools:`, `generation_config:`, or `cached_content:`, the request is automatically wrapped as a `generateContentRequest` so the count reflects the full payload:
+
+```ruby
+response = client.count_tokens(
+  "What is the weather in Tokyo?",
+  system_instruction: "You are a concise weather assistant.",
+  tools: [
+    {
+      function_declarations: [
+        {
+          name: "get_weather",
+          description: "Get the current weather for a city.",
+          parameters: {
+            type: "object",
+            properties: { city: { type: "string" } },
+            required: ["city"]
+          }
+        }
+      ]
+    }
+  ]
+)
+
+puts response.count_tokens
+```
+
+#### Direct Access via `tokens`
+
+```ruby
+client.tokens.count("Hello", model: "gemini-2.5-flash")
+```
+
+#### Response Helpers
+
+```ruby
+response.count_tokens                # totalTokens from the API (Integer)
+response.prompt_tokens_details       # per-modality breakdown (Array<Hash>)
+response.cached_content_token_count  # tokens reused from cachedContent (Integer)
+response.count_tokens_response?      # true if the payload is a countTokens response
+```
+
+A complete example is available in `demo/count_tokens_demo.rb`.
 
 ### Structured Output with JSON Schema
 

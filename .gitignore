@@ -10,6 +10,7 @@
 /generated_images/
 /api_responses/
 /sample_files/
+/docs/
 
 /node_modules/
 /package.json

@@ -80,6 +80,28 @@ module Gemini
       @embeddings_api ||= Gemini::Embeddings.new(client: self)
     end
 
+    # Token counting APIアクセサ
+    def tokens
+      @tokens ||= Gemini::Tokens.new(client: self)
+    end
+
+    # Convenience wrapper for countTokens.
+    # input can be a String, Array of parts/strings, Hash, or omitted when contents: is given.
+    def count_tokens(input = nil, model: Gemini::Tokens::DEFAULT_MODEL, contents: nil,
+                     system_instruction: nil, tools: nil, generation_config: nil,
+                     cached_content: nil, **parameters)
+      tokens.count(
+        input,
+        model: model,
+        contents: contents,
+        system_instruction: system_instruction,
+        tools: tools,
+        generation_config: generation_config,
+        cached_content: cached_content,
+        **parameters
+      )
+    end
+
     def reset_headers
       @extra_headers = {}
     end

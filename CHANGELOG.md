@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Added
+- `countTokens` API support
+  - `client.tokens.count(input, ...)` and `client.count_tokens(input, ...)` shortcut
+  - Accepts String / Array / Hash inputs, full `contents:` array, plus optional `system_instruction:`, `tools:`, `generation_config:`, `cached_content:` (auto-wraps payload in `generateContentRequest` when extra fields are present)
+  - `Response` helpers: `#count_tokens`, `#prompt_tokens_details`, `#cached_content_token_count`, `#count_tokens_response?`
+  - Demos: `count_tokens_demo.rb` / `count_tokens_demo_ja.rb`
+
 ## [1.1.0] - 2026-04-29
 
 ### Added

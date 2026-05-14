@@ -73,7 +73,8 @@ module Gemini
       !@raw_data.nil? &&
       ((@raw_data.key?("candidates") && !@raw_data["candidates"].empty?) ||
        (@raw_data.key?("predictions") && !@raw_data["predictions"].empty?) ||
-       embedding_response?)
+       embedding_response? ||
+       count_tokens_response?)
     end
 
     # Check if the raw response contains embedding data
@@ -230,6 +231,28 @@ module Gemini
     # Get total tokens used
     def total_tokens
       usage&.dig("totalTokens") || 0
+    end
+
+    # Check whether this response is a countTokens API result
+    def count_tokens_response?
+      !@raw_data.nil? && @raw_data.key?("totalTokens") &&
+        !@raw_data.key?("candidates") && !@raw_data.key?("predictions") &&
+        !embedding_response?
+    end
+
+    # Total tokens reported by the countTokens API (top-level totalTokens)
+    def count_tokens
+      @raw_data&.dig("totalTokens")
+    end
+
+    # Cached content token count reported by countTokens
+    def cached_content_token_count
+      @raw_data&.dig("cachedContentTokenCount") || 0
+    end
+
+    # Per-modality token breakdown reported by countTokens
+    def prompt_tokens_details
+      @raw_data&.dig("promptTokensDetails") || []
     end
     
     # Process chunks for streaming responses
