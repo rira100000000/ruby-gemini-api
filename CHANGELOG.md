@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-14
+
 ### Added
 - TTS (speech generation) API support
   - `client.tts.generate(text, voice:)` and `client.generate_speech(text, voice:)` shortcut
