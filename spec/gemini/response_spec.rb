@@ -98,6 +98,36 @@ RSpec.describe Gemini::Response do
     }
   end
 
+  # Mock of a Code Execution response
+  let(:code_execution_response_data) do
+    {
+      "candidates" => [
+        {
+          "content" => {
+            "parts" => [
+              { "text" => "The sum is 5117." },
+              {
+                "executableCode" => {
+                  "language" => "PYTHON",
+                  "code" => "print(sum(primes))"
+                }
+              },
+              {
+                "codeExecutionResult" => {
+                  "outcome" => "OUTCOME_OK",
+                  "output" => "5117\n"
+                }
+              }
+            ],
+            "role" => "model"
+          },
+          "finishReason" => "STOP",
+          "index" => 0
+        }
+      ]
+    }
+  end
+
   # Mock of an error response
   let(:error_response_data) do
     {
@@ -443,6 +473,90 @@ RSpec.describe Gemini::Response do
     it 'returns empty array when no function calls exist' do
       response = Gemini::Response.new(basic_response_data)
       expect(response.function_calls).to eq([])
+    end
+  end
+
+  describe '#code_execution?' do
+    it 'returns true when executable code or execution results are present' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.code_execution?).to be true
+    end
+
+    it 'returns false when code execution parts are not present' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.code_execution?).to be false
+    end
+  end
+
+  describe '#executable_codes' do
+    it 'returns all executable code parts' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.executable_codes).to eq([
+        {
+          "language" => "PYTHON",
+          "code" => "print(sum(primes))"
+        }
+      ])
+    end
+  end
+
+  describe '#executable_code' do
+    it 'returns the first generated code string' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.executable_code).to eq("print(sum(primes))")
+    end
+
+    it 'returns nil when executable code is not present' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.executable_code).to be_nil
+    end
+  end
+
+  describe '#code_execution_results' do
+    it 'returns all code execution result parts' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.code_execution_results).to eq([
+        {
+          "outcome" => "OUTCOME_OK",
+          "output" => "5117\n"
+        }
+      ])
+    end
+  end
+
+  describe '#code_execution_output' do
+    it 'returns the first execution output string' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.code_execution_output).to eq("5117\n")
+    end
+
+    it 'returns nil when execution output is not present' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.code_execution_output).to be_nil
+    end
+  end
+
+  describe '#code_execution_outcome' do
+    it 'returns the first execution outcome' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.code_execution_outcome).to eq("OUTCOME_OK")
+    end
+
+    it 'returns nil when execution result is not present' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.code_execution_outcome).to be_nil
+    end
+  end
+
+  describe '#code_execution_success?' do
+    it 'returns true for OUTCOME_OK' do
+      response = Gemini::Response.new(code_execution_response_data)
+      expect(response.code_execution_success?).to be true
+    end
+
+    it 'returns false when execution result is not present' do
+      response = Gemini::Response.new(basic_response_data)
+      expect(response.code_execution_success?).to be false
     end
   end
 

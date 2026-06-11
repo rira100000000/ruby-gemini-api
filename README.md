@@ -34,6 +34,7 @@ This project is inspired by and pays homage to [ruby-openai](https://github.com/
 - Token counting (`countTokens`) for prompts, chat history, and full requests with system instruction / tools / cached content
 - Speech generation (TTS) with 30 prebuilt voices, single-speaker and multi-speaker modes, and one-line WAV file output
 - Live API: real-time bidirectional conversations with text/audio/video and function calling (sync and async)
+- Code Execution: let the model generate and run Python code, then inspect generated code and execution results
 
 ### Function Calling
 
@@ -109,6 +110,54 @@ all_tools.delete_function(:get_stock_price)
 puts "After deleting a function: #{all_tools.list_functions}"
 # => After deleting a function: [:get_current_weather, :send_email]
 ```
+
+### Code Execution
+
+Pass `code_execution: true` to let Gemini generate and run Python code when it helps answer calculation or data-processing tasks.
+
+```ruby
+require 'gemini'
+
+client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
+
+response = client.generate_content(
+  "Calculate the sum of the first 50 prime numbers and show the code you used",
+  model: "gemini-3.5-flash",
+  code_execution: true
+)
+
+puts response.text
+
+if response.code_execution?
+  puts response.executable_code
+  puts response.code_execution_outcome
+  puts response.code_execution_output
+end
+```
+
+You can also inspect all generated code and execution results:
+
+```ruby
+response.executable_codes          # => [{"language"=>"PYTHON", "code"=>"..."}]
+response.code_execution_results    # => [{"outcome"=>"OUTCOME_OK", "output"=>"..."}]
+response.code_execution_success?   # => true
+```
+
+Code Execution also works with image inputs. For Gemini 3 models, combine it with `thinking_level` when you want the model to inspect an image with code.
+
+```ruby
+response = client.generate_content(
+  [
+    { type: "text", text: "Read the small numbers in this image" },
+    { type: "image_file", image_file: { file_path: "meter.jpg" } }
+  ],
+  model: "gemini-3.5-flash",
+  code_execution: true,
+  thinking_level: :medium
+)
+```
+
+A complete example is available in `demo/code_execution_demo.rb`.
 
 ### Thinking Feature
 
@@ -1681,6 +1730,7 @@ The gem includes several demo applications that showcase its functionality:
 - `demo/file_audio_demo.rb` - Audio transcription with large audio files
 - `demo/structured_output_demo.rb` - Structured JSON output with schema
 - `demo/enum_response_demo.rb` - Enum-constrained responses
+- `demo/code_execution_demo.rb` - Code Execution with generated Python code and execution output
 - `demo/thinking_demo.rb` - Thinking feature (Gemini 2.5)
 - `demo/thinking_gemini3_demo.rb` - Thinking feature (Gemini 3)
 - `demo/document_chat_demo.rb` - Document processing
@@ -1730,6 +1780,12 @@ ruby demo/structured_output_demo.rb
 # Enum-constrained responses
 ruby demo/enum_response_demo.rb
 
+# Code Execution
+ruby demo/code_execution_demo.rb
+
+# Code Execution with a different model
+GEMINI_MODEL=gemini-3.5-pro ruby demo/code_execution_demo.rb
+
 # Thinking feature (Gemini 2.5)
 ruby demo/thinking_demo.rb
 
@@ -1751,10 +1807,15 @@ ruby demo/embeddings_demo.rb
 
 ## Models
 
-The library supports various Gemini models:
+Model names can be passed as strings. Common examples:
 
+- `gemini-3.5-flash`
+- `gemini-3.5-pro`
+- `gemini-3-flash-preview`
 - `gemini-2.5-flash`
 - `gemini-2.5-pro`
+
+Use `client.models.list` to check models available to your API key.
 
 ## Requirements
 

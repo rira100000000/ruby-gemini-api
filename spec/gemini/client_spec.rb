@@ -473,4 +473,60 @@ RSpec.describe Gemini::Client do
       expect(response.text).to include("Ruby is a dynamic")
     end
   end
+
+  describe "#generate_content with code execution" do
+    let(:prompt) { "Calculate the sum of the first 50 prime numbers" }
+    let(:response_body) do
+      {
+        "candidates" => [
+          {
+            "content" => {
+              "parts" => [
+                { "text" => "The answer is 5117." },
+                {
+                  "executableCode" => {
+                    "language" => "PYTHON",
+                    "code" => "print(sum(primes))"
+                  }
+                },
+                {
+                  "codeExecutionResult" => {
+                    "outcome" => "OUTCOME_OK",
+                    "output" => "5117\n"
+                  }
+                }
+              ],
+              "role" => "model"
+            },
+            "finishReason" => "STOP",
+            "index" => 0
+          }
+        ]
+      }
+    end
+
+    before do
+      stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
+        .with(
+          body: hash_including(
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ code_execution: {} }]
+          ),
+          headers: { "Content-Type" => "application/json" }
+        )
+        .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+      allow(Gemini::Response).to receive(:new).and_return(response_instance)
+    end
+
+    it "adds the code_execution tool when requested" do
+      response = client.generate_content(
+        prompt,
+        model: "gemini-3.5-flash",
+        code_execution: true
+      )
+
+      expect(response).to be(response_instance)
+    end
+  end
 end

@@ -202,6 +202,7 @@ module Gemini
     def generate_content(prompt, model: "gemini-2.5-flash", system_instruction: nil,
                         response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil,
                         url_context: false, google_search: false,
+                        code_execution: false,
                         thinking_budget: nil, thinking_level: nil,
                         **parameters, &stream_callback)
       content = format_content(prompt)
@@ -230,7 +231,12 @@ module Gemini
       end
 
       # Handle tool shortcuts
-      tools = build_tools_array(tools, url_context: url_context, google_search: google_search)
+      tools = build_tools_array(
+        tools,
+        url_context: url_context,
+        google_search: google_search,
+        code_execution: code_execution
+      )
       params[:tools] = tools if tools && !tools.empty?
 
       params.merge!(parameters)
@@ -245,7 +251,8 @@ module Gemini
     # Streaming text generation
     def generate_content_stream(prompt, model: "gemini-2.5-flash", system_instruction: nil,
                               response_mime_type: nil, response_schema: nil, temperature: 0.5,
-                              url_context: false, google_search: false, **parameters, &block)
+                              url_context: false, google_search: false, code_execution: false,
+                              **parameters, &block)
       raise ArgumentError, "Block is required for streaming" unless block_given?
 
       content = format_content(prompt)
@@ -270,7 +277,12 @@ module Gemini
       params[:generation_config]["temperature"] = temperature
 
       # Handle tool shortcuts
-      tools = build_tools_array(nil, url_context: url_context, google_search: google_search)
+      tools = build_tools_array(
+        nil,
+        url_context: url_context,
+        google_search: google_search,
+        code_execution: code_execution
+      )
       params[:tools] = tools if tools && !tools.empty?
 
       # Merge other parameters
@@ -535,7 +547,7 @@ module Gemini
     end
 
     # Build tools array from explicit tools parameter and shortcuts
-    def build_tools_array(tools, url_context: false, google_search: false)
+    def build_tools_array(tools, url_context: false, google_search: false, code_execution: false)
       result_tools = []
 
       # Add existing tools if provided
@@ -550,6 +562,9 @@ module Gemini
 
       # Add google_search tool if requested
       result_tools << { google_search: {} } if google_search
+
+      # Add code_execution tool if requested
+      result_tools << { code_execution: {} } if code_execution
 
       # Remove duplicates based on tool keys and return
       return nil if result_tools.empty?

@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Added
+- Code Execution shortcut support via `code_execution: true` on `generate_content` / `generate_content_stream`
+- `Response` helpers for Code Execution results: `#code_execution?`, `#executable_code`, `#executable_codes`, `#code_execution_output`, `#code_execution_outcome`, `#code_execution_success?`, `#code_execution_results`
+
 ## [1.2.0] - 2026-05-14
 
 ### Added

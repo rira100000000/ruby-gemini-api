@@ -37,6 +37,54 @@ module Gemini
       
       parts.select { |part| part.key?("text") }.map { |part| part["text"] }
     end
+
+    # Get all executableCode parts returned by the Code Execution tool.
+    def executable_codes
+      return [] unless valid?
+
+      parts.map { |part| part["executableCode"] || part["executable_code"] }.compact
+    end
+
+    # Get the first generated code string from a Code Execution response.
+    def executable_code
+      code_part = executable_codes.first
+      return nil unless code_part
+
+      code_part["code"] || code_part[:code]
+    end
+
+    # Get all codeExecutionResult parts returned by the Code Execution tool.
+    def code_execution_results
+      return [] unless valid?
+
+      parts.map { |part| part["codeExecutionResult"] || part["code_execution_result"] }.compact
+    end
+
+    # Get the first execution output string from a Code Execution response.
+    def code_execution_output
+      result_part = code_execution_results.first
+      return nil unless result_part
+
+      result_part["output"] || result_part[:output]
+    end
+
+    # Get the first execution outcome (for example "OUTCOME_OK").
+    def code_execution_outcome
+      result_part = code_execution_results.first
+      return nil unless result_part
+
+      result_part["outcome"] || result_part[:outcome]
+    end
+
+    # True when the first Code Execution result completed successfully.
+    def code_execution_success?
+      code_execution_outcome == "OUTCOME_OK"
+    end
+
+    # True if the response contains generated code or execution results.
+    def code_execution?
+      !executable_codes.empty? || !code_execution_results.empty?
+    end
     
     # Get image parts (if any)
     def image_parts
