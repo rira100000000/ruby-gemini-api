@@ -114,7 +114,13 @@ puts "After deleting a function: #{all_tools.list_functions}"
 
 Gemini 2.5 and later models support the Thinking feature, which enables the model to perform internal reasoning processes for complex problems to generate higher-quality answers.
 
-#### Using with Gemini 2.5: `thinking_budget`
+#### Deprecation notice: thinking and sampling controls
+
+For Gemini 3 and later models, prefer `thinking_level` (`:minimal`, `:low`, `:medium`, `:high`) instead of `thinking_budget`. The `thinking_budget` option remains available for Gemini 2.5 compatibility, but it should be treated as a legacy control when targeting newer models.
+
+Sampling parameters such as `temperature`, `top_p`, and `top_k` are also considered legacy tuning knobs for newer Gemini models. Existing code can continue to pass them through for backward compatibility, but new integrations should rely on model defaults and Thinking controls first.
+
+#### Legacy Gemini 2.5 usage: `thinking_budget`
 
 ```ruby
 require 'gemini'
@@ -145,7 +151,7 @@ response = client.generate_content(
 )
 ```
 
-#### Using with Gemini 3: `thinking_level`
+#### Recommended Gemini 3 usage: `thinking_level`
 
 ```ruby
 # Specify thinking level (:minimal, :low, :medium, :high)
