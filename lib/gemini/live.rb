@@ -44,7 +44,7 @@ module Gemini
 
     # Establish a WebSocket connection and return a session
     #
-    # @param model [String] Model to use (default: "gemini-2.5-flash-live-preview")
+    # @param model [String] Model to use (default: Gemini::Live::Configuration::DEFAULT_MODEL)
     # @param response_modality [String] "TEXT" or "AUDIO" (default: "TEXT")
     # @param voice_name [String] Voice for audio responses (Puck, Charon, Kore, etc.)
     # @param system_instruction [String] System prompt

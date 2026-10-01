@@ -110,7 +110,7 @@ RSpec.describe Gemini::Client do
 
     context 'with thinking_budget' do
       it 'includes thinkingConfig in request' do
-        stub_request(:post, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+        stub_request(:post, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=#{api_key}")
           .with(
             body: hash_including(
               'generation_config' => hash_including(
@@ -164,7 +164,7 @@ RSpec.describe Gemini::Client do
     end
 
     it 'includes thinkingConfig when thinking_budget is provided in parameters' do
-      stub_request(:post, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+      stub_request(:post, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=#{api_key}")
         .with(
           body: hash_including(
             'generationConfig' => hash_including(
@@ -181,7 +181,7 @@ RSpec.describe Gemini::Client do
     end
 
     it 'includes thinkingConfig when thinking_level is provided in parameters' do
-      stub_request(:post, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+      stub_request(:post, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=#{api_key}")
         .with(
           body: hash_including(
             'generationConfig' => hash_including(

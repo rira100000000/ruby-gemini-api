@@ -17,7 +17,7 @@ cache_info_file = "gemini_cache_info.json"
 # モード選択: 新規キャッシュ作成 or 既存キャッシュ利用
 cache_mode = :create
 cache_name = nil
-model = "gemini-2.5-flash" # デフォルトモデル
+model = "gemini-3.5-flash" # デフォルトモデル
 
 if File.exist?(cache_info_file) && !ENV['FORCE_NEW_CACHE']
   begin

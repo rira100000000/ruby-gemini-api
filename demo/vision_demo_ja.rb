@@ -51,7 +51,7 @@ begin
         } 
       }
     ],
-    model: "gemini-2.5-flash"
+    model: "gemini-3.5-flash"
   )
 
   # 処理終了時間と経過時間の計算

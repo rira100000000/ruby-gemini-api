@@ -39,7 +39,7 @@ begin
   puts "\nURLの内容を要約しています..."
   response = client.generate_content(
     "このページの内容を日本語で詳しく要約してください: #{url}",
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     url_context: use_url_context
   )
 

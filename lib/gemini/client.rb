@@ -133,7 +133,7 @@ module Gemini
     # OpenAI chat-like text generation method for Gemini API
     # Extended to support streaming callbacks
     def chat(parameters: {}, &stream_callback)
-      model = parameters.delete(:model) || "gemini-2.5-flash"
+      model = parameters.delete(:model) || Gemini::DEFAULT_MODEL
 
       # thinking_budget / thinking_level をパラメータから抽出
       thinking_budget = parameters.delete(:thinking_budget)
@@ -199,7 +199,7 @@ module Gemini
     # Helper methods for convenience
     
     # Method with usage similar to OpenAI's chat
-    def generate_content(prompt, model: "gemini-2.5-flash", system_instruction: nil,
+    def generate_content(prompt, model: Gemini::DEFAULT_MODEL, system_instruction: nil,
                         response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil,
                         url_context: false, google_search: false,
                         code_execution: false,
@@ -249,7 +249,7 @@ module Gemini
     end
 
     # Streaming text generation
-    def generate_content_stream(prompt, model: "gemini-2.5-flash", system_instruction: nil,
+    def generate_content_stream(prompt, model: Gemini::DEFAULT_MODEL, system_instruction: nil,
                               response_mime_type: nil, response_schema: nil, temperature: 0.5,
                               url_context: false, google_search: false, code_execution: false,
                               **parameters, &block)
@@ -292,7 +292,7 @@ module Gemini
     end
 
     # ファイルを使った会話（複数ファイル対応）
-    def chat_with_multimodal(file_paths, prompt, model: "gemini-2.5-flash", **parameters)
+    def chat_with_multimodal(file_paths, prompt, model: Gemini::DEFAULT_MODEL, **parameters)
       # スレッドを作成
       thread = threads.create(parameters: { model: model })
       thread_id = thread["id"]
@@ -360,7 +360,7 @@ module Gemini
       end
     end
 
-    def generate_content_with_cache(prompt, cached_content:, model: "gemini-2.5-flash", **parameters)
+    def generate_content_with_cache(prompt, cached_content:, model: Gemini::DEFAULT_MODEL, **parameters)
       # モデル名にmodels/プレフィックスを追加
       model_name = model.start_with?("models/") ? model : "models/#{model}"
       
@@ -391,12 +391,12 @@ module Gemini
     end
 
     # 単一ファイルのヘルパー
-    def chat_with_file(file_path, prompt, model: "gemini-2.5-flash", **parameters)
+    def chat_with_file(file_path, prompt, model: Gemini::DEFAULT_MODEL, **parameters)
       chat_with_multimodal([file_path], prompt, model: model, **parameters)
     end
 
     # ファイルをアップロードして質問するシンプルなヘルパー
-    def upload_and_process_file(file_path, prompt, content_type: nil, model: "gemini-2.5-flash", **parameters)
+    def upload_and_process_file(file_path, prompt, content_type: nil, model: Gemini::DEFAULT_MODEL, **parameters)
       # MIMEタイプを自動判定
       mime_type = content_type || determine_mime_type(file_path)
       

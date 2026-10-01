@@ -52,14 +52,14 @@ begin
   end
   
   puts "\nSelect a model to use:"
-  puts "1. Gemini 2.0 (gemini-2.5-flash-image-preview)"
-  puts "2. Imagen 3 (imagen-3.0-generate-002) [Note: Not yet fully tested with this demo]"
+  puts "1. Nano Banana 2 (gemini-3.1-flash-image)"
+  puts "2. Nano Banana Pro (gemini-3-pro-image) [Higher quality]"
   model_choice = gets.chomp.to_i
   model = case model_choice
           when 2
-            "imagen-3.0-generate-002"
+            "gemini-3-pro-image"
           else
-            "gemini-2.5-flash-image-preview"
+            "gemini-3.1-flash-image"
           end
 
   puts "\nSelect image size:"
@@ -83,13 +83,7 @@ begin
            "1:1"
          end
 
-  # For Imagen 3, number of images can be specified
   sample_count = 1
-  if model.start_with?("imagen")
-    puts "\nSpecify the number of images to generate (1-4):"
-    sample_count = gets.chomp.to_i
-    sample_count = [[sample_count, 1].max, 4].min # Limit to range 1-4
-  end
 
   # Setup output filenames
   timestamp = Time.now.strftime('%Y%m%d%H%M%S')

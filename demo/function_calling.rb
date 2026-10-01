@@ -17,7 +17,7 @@ user_prompt = "Tell me the current weather in Tokyo."
 # Send request to Gemini API
 response = client.generate_content(
   user_prompt,
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   tools: tools
 )
 

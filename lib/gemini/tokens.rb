@@ -1,6 +1,6 @@
 module Gemini
   class Tokens
-    DEFAULT_MODEL = "gemini-2.5-flash".freeze
+    DEFAULT_MODEL = Gemini::DEFAULT_MODEL
 
     def initialize(client:)
       @client = client

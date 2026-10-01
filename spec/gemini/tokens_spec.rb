@@ -4,7 +4,7 @@ RSpec.describe Gemini::Tokens do
   let(:api_key) { 'test_api_key' }
   let(:client) { Gemini::Client.new(api_key) }
   let(:base_url) { "https://generativelanguage.googleapis.com/v1beta" }
-  let(:default_model) { "gemini-2.5-flash" }
+  let(:default_model) { "gemini-3.5-flash" }
 
   let(:simple_response_body) do
     {

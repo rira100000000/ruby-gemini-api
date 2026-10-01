@@ -3,6 +3,12 @@ require "faraday/multipart"
 require "json"
 
 require_relative "gemini/version"
+
+module Gemini
+  # Default model for text / multimodal generation helpers.
+  DEFAULT_MODEL = "gemini-3.5-flash".freeze
+end
+
 require_relative "gemini/tool_definition"
 require_relative "gemini/http_headers"
 require_relative "gemini/http"
