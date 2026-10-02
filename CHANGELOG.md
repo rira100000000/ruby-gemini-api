@@ -1,8 +1,8 @@
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-02
+
 ### Added
-- Code Execution shortcut support via `code_execution: true` on `generate_content` / `generate_content_stream`
-- `Response` helpers for Code Execution results: `#code_execution?`, `#executable_code`, `#executable_codes`, `#code_execution_output`, `#code_execution_outcome`, `#code_execution_success?`, `#code_execution_results`
 - `Gemini::DEFAULT_MODEL` constant shared by all text / multimodal helpers, and `Gemini::Images::DEFAULT_MODEL`
 
 ### Changed
@@ -10,9 +10,16 @@
 - Default image model changed from the retired `gemini-2.5-flash-image-preview` to `gemini-3.1-flash-image`
 - Default TTS model changed from `gemini-2.5-flash-preview-tts` to `gemini-3.8-flash-tts`
 - Image generation demos now use `gemini-3.1-flash-image` / `gemini-3-pro-image`; text demos use `gemini-3.5-flash`
+- `generate_content` / `generate_content_stream` no longer send `temperature: 0.5` by default. `temperature` is only sent when passed explicitly, so the model default (1.0, recommended for Gemini 3) applies. Pass `temperature: 0.5` to keep the previous behavior.
 
 ### Deprecated
 - Imagen models (`imagen-*`) via `client.images.generate`. Imagen is no longer served by the Gemini API; the `:predict` path still works but emits a deprecation warning and will be removed in a future release.
+
+## [1.3.0] - 2026-06-11
+
+### Added
+- Code Execution shortcut support via `code_execution: true` on `generate_content` / `generate_content_stream`
+- `Response` helpers for Code Execution results: `#code_execution?`, `#executable_code`, `#executable_codes`, `#code_execution_output`, `#code_execution_outcome`, `#code_execution_success?`, `#code_execution_results`
 
 ## [1.2.0] - 2026-05-14
 

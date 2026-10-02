@@ -455,8 +455,7 @@ RSpec.describe Gemini::Client do
       stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
         .with(
           body: {
-            contents: [{ parts: [{ text: prompt }] }],
-            generation_config: {temperature: 0.5}
+            contents: [{ parts: [{ text: prompt }] }]
           }.to_json,
           headers: { "Content-Type" => "application/json" }
         )
@@ -471,6 +470,15 @@ RSpec.describe Gemini::Client do
       expect(response).to be(response_instance)
       pp response.text
       expect(response.text).to include("Ruby is a dynamic")
+    end
+
+    it "sends temperature only when explicitly given" do
+      stub = stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
+        .with { |req| JSON.parse(req.body).dig("generation_config", "temperature") == 0.2 }
+        .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+      client.generate_content(prompt, temperature: 0.2)
+      expect(stub).to have_been_requested
     end
   end
 

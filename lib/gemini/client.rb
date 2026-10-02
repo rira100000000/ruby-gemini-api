@@ -200,7 +200,7 @@ module Gemini
     
     # Method with usage similar to OpenAI's chat
     def generate_content(prompt, model: Gemini::DEFAULT_MODEL, system_instruction: nil,
-                        response_mime_type: nil, response_schema: nil, temperature: 0.5, tools: nil,
+                        response_mime_type: nil, response_schema: nil, temperature: nil, tools: nil,
                         url_context: false, google_search: false,
                         code_execution: false,
                         thinking_budget: nil, thinking_level: nil,
@@ -215,7 +215,8 @@ module Gemini
         params[:system_instruction] = format_content(system_instruction)
       end
       params[:generation_config] ||= {}
-      params[:generation_config]["temperature"] = temperature
+      # temperature is only sent when given; Gemini 3 models recommend the default (1.0)
+      params[:generation_config]["temperature"] = temperature unless temperature.nil?
       if response_mime_type
         params[:generation_config]["response_mime_type"] = response_mime_type
       end
@@ -238,6 +239,7 @@ module Gemini
         code_execution: code_execution
       )
       params[:tools] = tools if tools && !tools.empty?
+      params.delete(:generation_config) if params[:generation_config].empty?
 
       params.merge!(parameters)
 
@@ -250,7 +252,7 @@ module Gemini
 
     # Streaming text generation
     def generate_content_stream(prompt, model: Gemini::DEFAULT_MODEL, system_instruction: nil,
-                              response_mime_type: nil, response_schema: nil, temperature: 0.5,
+                              response_mime_type: nil, response_schema: nil, temperature: nil,
                               url_context: false, google_search: false, code_execution: false,
                               **parameters, &block)
       raise ArgumentError, "Block is required for streaming" unless block_given?
@@ -274,7 +276,9 @@ module Gemini
       if response_schema
         params[:generation_config][:response_schema] = response_schema
       end
-      params[:generation_config]["temperature"] = temperature
+      # temperature is only sent when given; Gemini 3 models recommend the default (1.0)
+      params[:generation_config]["temperature"] = temperature unless temperature.nil?
+      params.delete(:generation_config) if params[:generation_config].empty?
 
       # Handle tool shortcuts
       tools = build_tools_array(
