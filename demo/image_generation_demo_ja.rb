@@ -52,14 +52,14 @@ begin
   end
   
   puts "\n使用するモデルを選択してください："
-  puts "1. Gemini 2.0 (gemini-2.5-flash-image-preview)"
-  puts "2. Imagen 3 (imagen-3.0-generate-002) 注意:まだ動作確認していません"
+  puts "1. Nano Banana 2 (gemini-3.1-flash-image)"
+  puts "2. Nano Banana Pro (gemini-3-pro-image) [高品質]"
   model_choice = gets.chomp.to_i
   model = case model_choice
           when 2
-            "imagen-3.0-generate-002"
+            "gemini-3-pro-image"
           else
-            "gemini-2.5-flash-image-preview"
+            "gemini-3.1-flash-image"
           end
 
   puts "\n画像サイズを選択してください："
@@ -83,13 +83,7 @@ begin
            "1:1"
          end
 
-  # Imagen 3の場合は画像枚数も指定可能
   sample_count = 1
-  if model.start_with?("imagen")
-    puts "\n生成する画像の枚数を指定してください（1〜4）："
-    sample_count = gets.chomp.to_i
-    sample_count = [[sample_count, 1].max, 4].min # 1〜4の範囲に制限
-  end
 
   # 出力ファイル名の設定
   timestamp = Time.now.strftime('%Y%m%d%H%M%S')

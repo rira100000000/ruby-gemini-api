@@ -6,7 +6,7 @@ RSpec.describe Gemini::TTS do
   let(:api_key) { 'test_api_key' }
   let(:client) { Gemini::Client.new(api_key) }
   let(:base_url) { "https://generativelanguage.googleapis.com/v1beta" }
-  let(:default_model) { "gemini-2.5-flash-preview-tts" }
+  let(:default_model) { "gemini-3.8-flash-tts" }
 
   # 100 zero bytes of PCM = simple valid payload
   let(:pcm_bytes) { "\x00".b * 100 }

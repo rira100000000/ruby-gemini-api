@@ -1,6 +1,6 @@
 module Gemini
   class TTS
-    DEFAULT_MODEL = "gemini-2.5-flash-preview-tts".freeze
+    DEFAULT_MODEL = "gemini-3.8-flash-tts".freeze
 
     # 30 prebuilt voice names available for the prebuiltVoiceConfig
     VOICES = %w[
@@ -20,7 +20,7 @@ module Gemini
     #       or "Speaker 1: ... Speaker 2: ..." for multi-speaker).
     # voice: a single voice name (prebuiltVoiceConfig). Mutually exclusive with multi_speaker.
     # multi_speaker: Array of { speaker:, voice: } Hashes for multi-speaker output.
-    # model: TTS preview model name. Defaults to gemini-2.5-flash-preview-tts.
+    # model: TTS model name. Defaults to gemini-3.8-flash-tts.
     # speech_config: raw speechConfig Hash override (skips voice/multi_speaker handling).
     def generate(text, voice: nil, multi_speaker: nil, model: DEFAULT_MODEL,
                  speech_config: nil, **parameters)

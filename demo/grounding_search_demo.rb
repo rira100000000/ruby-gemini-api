@@ -13,7 +13,7 @@ begin
   # Use Google Search to get real-time information
   response = client.generate_content(
     "Who won the euro 2024?",
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     tools: [{ google_search: {} }]
   )
   
@@ -41,7 +41,7 @@ begin
   puts "\nExample of getting latest information:"
   response2 = client.generate_content(
     "What are the latest tech news from Japan?",
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     tools: [{ google_search: {} }]
   )
   

@@ -61,7 +61,7 @@ RSpec.describe Gemini::Client do
         allow(client).to receive(:encode_image_from_url).with(image_url).and_return("base64_encoded_image_data")
         allow(client).to receive(:determine_mime_type).with(image_url).and_return("image/jpeg")
 
-        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+        stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
           .with(
             body: hash_including(
               contents: [
@@ -84,7 +84,7 @@ RSpec.describe Gemini::Client do
       end
 
       it "sends a request with image url data and returns Response object" do
-        response = client.generate_content(prompt, model: "gemini-2.5-flash")
+        response = client.generate_content(prompt, model: "gemini-3.5-flash")
         expect(response).to be(response_instance)
         expect(response.text).to eq(sample_text_response)
       end
@@ -102,7 +102,7 @@ RSpec.describe Gemini::Client do
         allow(client).to receive(:encode_image_from_file).with(file_path).and_return("base64_encoded_image_data")
         allow(client).to receive(:determine_mime_type).with(file_path).and_return("image/jpeg")
 
-        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+        stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
           .with(
             body: hash_including(
               contents: [
@@ -125,7 +125,7 @@ RSpec.describe Gemini::Client do
       end
 
       it "sends a request with image file data and returns Response object" do
-        response = client.generate_content(prompt, model: "gemini-2.5-flash")
+        response = client.generate_content(prompt, model: "gemini-3.5-flash")
         expect(response).to be(response_instance)
         expect(response.text).to eq(sample_text_response)
       end
@@ -139,7 +139,7 @@ RSpec.describe Gemini::Client do
       ] }
       
       before do
-        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+        stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
           .with(
             body: hash_including(
               contents: [
@@ -162,7 +162,7 @@ RSpec.describe Gemini::Client do
       end
 
       it "sends a request with direct base64 image data and returns Response object" do
-        response = client.generate_content(prompt, model: "gemini-2.5-flash")
+        response = client.generate_content(prompt, model: "gemini-3.5-flash")
         expect(response).to be(response_instance)
         expect(response.text).to eq(sample_text_response)
       end
@@ -184,7 +184,7 @@ RSpec.describe Gemini::Client do
         allow(client).to receive(:determine_mime_type).with(image_url1).and_return("image/jpeg")
         allow(client).to receive(:determine_mime_type).with(image_url2).and_return("image/jpeg")
 
-        stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+        stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
           .with(
             body: hash_including(
               contents: [
@@ -213,7 +213,7 @@ RSpec.describe Gemini::Client do
       end
 
       it "sends a request with multiple image data and returns Response object" do
-        response = client.generate_content(prompt, model: "gemini-2.5-flash")
+        response = client.generate_content(prompt, model: "gemini-3.5-flash")
         expect(response).to be(response_instance)
         expect(response.text).to eq(sample_text_response)
       end
@@ -221,7 +221,7 @@ RSpec.describe Gemini::Client do
   end
   
   describe "#chat" do
-    let(:model) { "gemini-2.5-flash" }
+    let(:model) { "gemini-3.5-flash" }
     let(:response_body) do
       {
         "candidates" => [
@@ -339,7 +339,7 @@ RSpec.describe Gemini::Client do
   end
 
   describe "#generate_content_stream" do
-    let(:model) { "gemini-2.5-flash" }
+    let(:model) { "gemini-3.5-flash" }
     
     before do
       allow(Gemini::Response).to receive(:new).and_return(response_instance)
@@ -452,11 +452,10 @@ RSpec.describe Gemini::Client do
     end
 
     before do
-      stub_request(:post, "#{base_url}/models/gemini-2.5-flash:generateContent?key=#{api_key}")
+      stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
         .with(
           body: {
-            contents: [{ parts: [{ text: prompt }] }],
-            generation_config: {temperature: 0.5}
+            contents: [{ parts: [{ text: prompt }] }]
           }.to_json,
           headers: { "Content-Type" => "application/json" }
         )
@@ -471,6 +470,15 @@ RSpec.describe Gemini::Client do
       expect(response).to be(response_instance)
       pp response.text
       expect(response.text).to include("Ruby is a dynamic")
+    end
+
+    it "sends temperature only when explicitly given" do
+      stub = stub_request(:post, "#{base_url}/models/gemini-3.5-flash:generateContent?key=#{api_key}")
+        .with { |req| JSON.parse(req.body).dig("generation_config", "temperature") == 0.2 }
+        .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
+
+      client.generate_content(prompt, temperature: 0.2)
+      expect(stub).to have_been_requested
     end
   end
 

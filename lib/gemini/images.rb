@@ -1,5 +1,7 @@
 module Gemini
   class Images
+    DEFAULT_MODEL = "gemini-3.1-flash-image".freeze
+
     def initialize(client:)
       @client = client
     end
@@ -9,7 +11,7 @@ module Gemini
       prompt = parameters[:prompt]
       raise ArgumentError, "prompt parameter is required" unless prompt
 
-      model = parameters[:model] || "gemini-2.5-flash-image-preview"
+      model = parameters[:model] || DEFAULT_MODEL
       
       # Image editing mode if input images are provided (supports single/multiple images)
       if has_input_images?(parameters)
@@ -18,10 +20,10 @@ module Gemini
       
       # Image generation process based on model
       if model.start_with?("imagen")
-        # Use Imagen 3
+        # Imagen (legacy :predict endpoint)
         response = imagen_generate(prompt, parameters)
       else
-        # Use Gemini 2.0
+        # Gemini native image generation
         response = gemini_generate(prompt, parameters)
       end
       
@@ -263,10 +265,10 @@ module Gemini
       end
     end
 
-    # Image generation using Gemini 2.5 model (original code unchanged)
+    # Image generation using Gemini native image models
     def gemini_generate(prompt, parameters)
       # Prepare parameters
-      model = parameters[:model] || "gemini-2.5-flash-image-preview"
+      model = parameters[:model] || DEFAULT_MODEL
       
       # Process size parameter (currently not used in Gemini API)
       # aspect_ratio = process_size_parameter(parameters[:size])
@@ -293,10 +295,12 @@ module Gemini
       )
     end
     
-    # Image generation using Imagen 3 model (original code unchanged)
+    # Image generation using Imagen models via the :predict endpoint.
+    # Deprecated: Imagen has been shut down on the Gemini API.
     def imagen_generate(prompt, parameters)
-      # Get model name (default is Imagen 3 standard model)
-      model = parameters[:model] || "imagen-3.0-generate-002"
+      model = parameters[:model]
+      warn "[ruby-gemini-api] DEPRECATION: Imagen models (#{model}) are no longer served by the Gemini API. " \
+           "Use a Gemini image model such as #{DEFAULT_MODEL} instead. Imagen support will be removed in a future release."
       
       # Get aspect ratio from size parameter
       aspect_ratio = process_size_parameter(parameters[:size])

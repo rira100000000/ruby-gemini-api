@@ -9,7 +9,7 @@ module Gemini
 
     # 動画ファイルを分析する（Files APIでアップロード後に分析）
     # 20MB以上のファイルや複数回利用する場合に推奨
-    def analyze(file: nil, file_path: nil, prompt:, model: "gemini-2.5-flash", **parameters)
+    def analyze(file: nil, file_path: nil, prompt:, model: Gemini::DEFAULT_MODEL, **parameters)
       # ファイルパスが指定されている場合はファイルを開く
       if file_path && !file
         file = File.open(file_path, "rb")
@@ -53,7 +53,7 @@ module Gemini
     end
 
     # アップロード済みのファイルURIを使用して分析
-    def analyze_with_file_uri(file_uri:, prompt:, model: "gemini-2.5-flash", mime_type: "video/mp4", **parameters)
+    def analyze_with_file_uri(file_uri:, prompt:, model: Gemini::DEFAULT_MODEL, mime_type: "video/mp4", **parameters)
       raw_response = generate_video_content(
         file_uri: file_uri,
         mime_type: mime_type,
@@ -66,7 +66,7 @@ module Gemini
     end
 
     # YouTube URLから動画を分析（公開動画のみ）
-    def analyze_youtube(url:, prompt:, model: "gemini-2.5-flash", **parameters)
+    def analyze_youtube(url:, prompt:, model: Gemini::DEFAULT_MODEL, **parameters)
       # YouTube URLのバリデーション
       unless valid_youtube_url?(url)
         raise ArgumentError, "Invalid YouTube URL. Only public YouTube videos are supported."
@@ -99,7 +99,7 @@ module Gemini
     end
 
     # 小さい動画ファイルをインラインデータとして分析（20MB未満向け）
-    def analyze_inline(file: nil, file_path: nil, prompt:, model: "gemini-2.5-flash", **parameters)
+    def analyze_inline(file: nil, file_path: nil, prompt:, model: Gemini::DEFAULT_MODEL, **parameters)
       # ファイルパスが指定されている場合はファイルを開く
       if file_path && !file
         file = File.open(file_path, "rb")
@@ -157,7 +157,7 @@ module Gemini
     end
 
     # 動画の説明を取得するヘルパーメソッド
-    def describe(file: nil, file_path: nil, file_uri: nil, youtube_url: nil, model: "gemini-2.5-flash", language: "ja", **parameters)
+    def describe(file: nil, file_path: nil, file_uri: nil, youtube_url: nil, model: Gemini::DEFAULT_MODEL, language: "ja", **parameters)
       prompt = language == "ja" ? "この動画の内容を詳しく説明してください。" : "Describe this video in detail."
 
       if youtube_url
@@ -173,7 +173,7 @@ module Gemini
     end
 
     # タイムスタンプを抽出するヘルパーメソッド
-    def extract_timestamps(file: nil, file_path: nil, file_uri: nil, youtube_url: nil, query:, model: "gemini-2.5-flash", **parameters)
+    def extract_timestamps(file: nil, file_path: nil, file_uri: nil, youtube_url: nil, query:, model: Gemini::DEFAULT_MODEL, **parameters)
       prompt = "動画内で「#{query}」が登場するタイムスタンプを全て抽出してください。MM:SS形式で出力してください。"
 
       if youtube_url
@@ -189,7 +189,7 @@ module Gemini
     end
 
     # 動画のセグメント（一部分）を分析
-    def analyze_segment(file_uri:, prompt:, start_offset: nil, end_offset: nil, model: "gemini-2.5-flash", mime_type: "video/mp4", **parameters)
+    def analyze_segment(file_uri:, prompt:, start_offset: nil, end_offset: nil, model: Gemini::DEFAULT_MODEL, mime_type: "video/mp4", **parameters)
       # videoMetadataを構築
       video_metadata = {}
       video_metadata[:startOffset] = start_offset if start_offset
@@ -226,7 +226,7 @@ module Gemini
     end
 
     # 動画に関する質問に回答
-    def ask(file: nil, file_path: nil, file_uri: nil, youtube_url: nil, question:, model: "gemini-2.5-flash", **parameters)
+    def ask(file: nil, file_path: nil, file_uri: nil, youtube_url: nil, question:, model: Gemini::DEFAULT_MODEL, **parameters)
       if youtube_url
         analyze_youtube(url: youtube_url, prompt: question, model: model, **parameters)
       elsif file_uri

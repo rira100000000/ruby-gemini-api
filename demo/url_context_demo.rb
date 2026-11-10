@@ -39,7 +39,7 @@ begin
   puts "\nSummarizing the URL content..."
   response = client.generate_content(
     "Please summarize the content of this page in detail: #{url}",
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     url_context: use_url_context
   )
 

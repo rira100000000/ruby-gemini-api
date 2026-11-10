@@ -58,7 +58,7 @@ def main
       parameters: {
         prompt: create_pixel_art_prompt,
         image_path: image_path,
-        model: "gemini-2.5-flash-image-preview",
+        model: "gemini-3.1-flash-image",
         temperature: 0.7
       }
     )
@@ -116,14 +116,14 @@ def generate_with_retry(client, image_path, max_retries = 3)
   loop do
     begin
       puts "🚀 API呼び出し中... (#{retry_count + 1}回目)"
-      puts "  モデル: gemini-2.5-flash-image-preview"
+      puts "  モデル: gemini-3.1-flash-image"
       puts "  プロンプト: #{create_pixel_art_prompt[0..100]}..."
       
       response = client.images.generate(
         parameters: {
           prompt: create_pixel_art_prompt,
           image_path: image_path,
-          model: "gemini-2.5-flash-image-preview",
+          model: "gemini-3.1-flash-image",
           temperature: 0.7
         }
       )

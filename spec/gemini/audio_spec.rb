@@ -42,7 +42,7 @@ RSpec.describe Gemini::Audio do
         audio.transcribe(parameters: { file: test_audio_file })
         
         expect(client).to have_received(:json_post) do |args|
-          expect(args[:path]).to eq("models/gemini-2.5-flash:generateContent")
+          expect(args[:path]).to eq("models/gemini-3.5-flash:generateContent")
           
           # Verify content structure
           contents = args[:parameters][:contents]
@@ -152,7 +152,7 @@ RSpec.describe Gemini::Audio do
         
         expect(result).to be_a(Gemini::Response)
         expect(client).to have_received(:json_post) do |args|
-          expect(args[:path]).to eq("models/gemini-2.5-flash:generateContent")
+          expect(args[:path]).to eq("models/gemini-3.5-flash:generateContent")
           
           # Verify content structure
           contents = args[:parameters][:contents]

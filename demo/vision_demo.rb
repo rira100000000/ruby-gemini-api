@@ -51,7 +51,7 @@ begin
         } 
       }
     ],
-    model: "gemini-2.5-flash"
+    model: "gemini-3.5-flash"
   )
 
   # End time and elapsed time calculation

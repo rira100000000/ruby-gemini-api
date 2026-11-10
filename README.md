@@ -61,7 +61,7 @@ user_prompt = "Tell me the current weather in Tokyo."
 # Send request with the defined tools
 response = client.generate_content(
   user_prompt,
-  model: "gemini-2.5-flash", # Or any model that supports function calling
+  model: "gemini-3.5-flash", # Or any model that supports function calling
   tools: tools
 )
 
@@ -297,7 +297,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Generate text
 response = client.generate_content(
   "What are the main features of Ruby programming language?",
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 # Access the generated content using Response object
@@ -318,7 +318,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Stream response in real-time
 client.generate_content_stream(
   "Tell me a story about a programmer who loves Ruby",
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 ) do |chunk|
   print chunk
   $stdout.flush
@@ -341,7 +341,7 @@ contents = [
 
 # Get response with conversation history
 response = client.chat(parameters: {
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   contents: contents
 })
 
@@ -369,7 +369,7 @@ system_instruction = "You are a Ruby programming expert who provides concise cod
 
 # Use system instructions with chat
 response = client.chat(parameters: {
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   system_instruction: { parts: [{ text: system_instruction }] },
   contents: [{ role: "user", parts: [{ text: "How do I write a simple web server in Ruby?" }] }]
 })
@@ -396,7 +396,7 @@ response = client.generate_content(
     { type: "text", text: "Describe what you see in this image" },
     { type: "image_file", image_file: { file_path: "path/to/image.jpg" } }
   ],
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 # Access the description using Response object
@@ -427,7 +427,7 @@ response = client.generate_content(
     { text: "Describe this image in detail" },
     { file_data: { mime_type: "image/jpeg", file_uri: file_uri } }
   ],
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 # Process the response using Response object
@@ -457,7 +457,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Use Google Search to get real-time information
 response = client.generate_content(
   "Who won the euro 2024?",
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   tools: [{ google_search: {} }]
 )
 
@@ -498,7 +498,7 @@ end
 ```ruby
 response = client.generate_content(
   "What are the latest AI developments in 2024?",
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   tools: [{ google_search: {} }]
 )
 
@@ -530,7 +530,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Use URL Context to analyze web pages (shortcut)
 response = client.generate_content(
   "Summarize the content of this page: https://www.ruby-lang.org",
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   url_context: true
 )
 
@@ -545,7 +545,7 @@ end
 # Explicit tools parameter
 response = client.generate_content(
   "Compare these two pages: https://www.ruby-lang.org and https://www.python.org",
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   tools: [{ url_context: {} }]
 )
 ```
@@ -556,7 +556,7 @@ response = client.generate_content(
 # Use both URL Context and Google Search
 response = client.generate_content(
   "What is the latest information about Ruby from https://www.ruby-lang.org and recent news?",
-  model: "gemini-2.5-flash",
+  model: "gemini-3.5-flash",
   url_context: true,
   google_search: true
 )
@@ -607,7 +607,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 response = client.images.generate(
   parameters: {
     prompt: "A beautiful sunset over the ocean with sailing boats",
-    model: "gemini-2.5-flash-image-preview",
+    model: "gemini-3.1-flash-image",
     size: "16:9"
   }
 )
@@ -636,7 +636,7 @@ response = client.images.generate(
   parameters: {
     prompt: "Combine these two images to create a single artistic composition",
     image_paths: ["path/to/image1.jpg", "path/to/image2.png"],
-    model: "gemini-2.5-flash-image-preview",
+    model: "gemini-3.1-flash-image",
     temperature: 0.7
   }
 )
@@ -658,7 +658,7 @@ File.open("image1.jpg", "rb") do |file1|
       parameters: {
         prompt: "Combine these images together",
         images: [file1, file2],
-        model: "gemini-2.5-flash-image-preview"
+        model: "gemini-3.1-flash-image"
       }
     )
     
@@ -683,31 +683,12 @@ response = client.images.generate(
     prompt: "Merge these images together",
     image_base64s: [base64_data1, base64_data2],
     mime_types: ["image/jpeg", "image/png"],
-    model: "gemini-2.5-flash-image-preview"
+    model: "gemini-3.1-flash-image"
   }
 )
 ```
 
-You can also use Imagen 3 model (Note: This feature is not fully tested yet):
-
-```ruby
-# Generate multiple images using Imagen 3
-response = client.images.generate(
-  parameters: {
-    prompt: "A futuristic city with flying cars and tall skyscrapers",
-    model: "imagen-3.0-generate-002",
-    size: "1:1",
-    n: 4  # Generate 4 images
-  }
-)
-
-# Save all generated images
-if response.success? && !response.images.empty?
-  filepaths = response.images.map.with_index { |_, i| "imagen_#{i+1}.png" }
-  saved_files = response.save_images(filepaths)
-  saved_files.each { |f| puts "Image saved to #{f}" if f }
-end
-```
+> **Deprecated:** Imagen models (`imagen-*`) are no longer served by the Gemini API. Passing `model: "imagen-..."` still calls the `:predict` endpoint as before, but emits a deprecation warning, and this path will be removed in a future release. Use a Gemini image model (such as the default `gemini-3.1-flash-image`) instead.
 
 For complete examples, check out the `demo/image_generation_demo.rb` and `demo/multi_image_generation_demo.rb` files included with the gem.
 
@@ -721,7 +702,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 # Transcribe audio file (note: file size limit is 20MB for direct upload)
 response = client.audio.transcribe(
   parameters: {
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     file: File.open("audio_file.mp3", "rb"),
     language: "en",
     content_text: "Transcribe this audio clip"
@@ -753,7 +734,7 @@ file_name = upload_result["file"]["name"]
 # Use the file ID for transcription
 response = client.audio.transcribe(
   parameters: {
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     file_uri: file_uri,
     language: "en"
   }
@@ -916,7 +897,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 result = client.documents.process(
   file_path: "path/to/document.pdf",
   prompt: "Summarize this document in three key points",
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 response = result[:response]
@@ -945,7 +926,7 @@ file_path = "path/to/document.pdf"
 thread_result = client.chat_with_file(
   file_path,
   "Please provide an overview of this document",
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 # Get the thread ID (for continuing the conversation)
@@ -992,7 +973,7 @@ Demo applications can be found in `demo/document_chat_demo.rb` and `demo/documen
 
 Context caching allows you to preprocess and store inputs like large documents or images with the Gemini API, then reuse them across multiple requests. This saves processing time and token usage when asking different questions about the same content.
 
-**Important**: Context caching requires a minimum input of 32,768 tokens. The maximum token count matches the context window size of the model you are using. Caches automatically expire after 48 hours, but you can set a custom TTL (Time To Live). Using stable model versions like gemini-2.5-flash is recommended.
+**Important**: Context caching requires a minimum input of 32,768 tokens. The maximum token count matches the context window size of the model you are using. Caches automatically expire after 48 hours, but you can set a custom TTL (Time To Live). Using stable model versions like gemini-3.5-flash is recommended.
 
 ```ruby
 require 'gemini'
@@ -1004,7 +985,7 @@ cache_result = client.documents.cache(
   file_path: "path/to/large_document.pdf",
   system_instruction: "You are a document analysis expert. Please understand the content thoroughly and answer questions accurately.",
   ttl: "86400s", # 24 hours (in seconds)
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 # Get the cache name
@@ -1015,7 +996,7 @@ puts "Cache name: #{cache_name}"
 response = client.generate_content_with_cache(
   "What are the key findings in this document?",
   cached_content: cache_name,
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 if response.success?
@@ -1337,7 +1318,7 @@ puts response.count_tokens             # => 9 (totalTokens)
 puts response.prompt_tokens_details    # => [{"modality"=>"TEXT", "tokenCount"=>9}]
 ```
 
-By default the request goes to `gemini-2.5-flash`. Override it with `model:`:
+By default the request goes to `gemini-3.5-flash`. Override it with `model:`:
 
 ```ruby
 client.count_tokens("Hello", model: "gemini-2.5-pro")
@@ -1388,7 +1369,7 @@ puts response.count_tokens
 #### Direct Access via `tokens`
 
 ```ruby
-client.tokens.count("Hello", model: "gemini-2.5-flash")
+client.tokens.count("Hello", model: "gemini-3.5-flash")
 ```
 
 #### Response Helpers
@@ -1474,8 +1455,8 @@ Stick to **one style per call**: switching style mid-prompt (e.g. `[whispers] ..
 
 #### Models and Voices
 
-- Default model: `gemini-2.5-flash-preview-tts` (override via `model:`)
-- Other models: `gemini-2.5-pro-preview-tts`, `gemini-3.1-flash-tts-preview`
+- Default model: `gemini-3.8-flash-tts` (override via `model:`)
+- Other models: `gemini-3.8-flash-lite-tts`, `gemini-2.5-flash-preview-tts`, `gemini-2.5-pro-preview-tts`
 - 30 prebuilt voices are listed in `Gemini::TTS::VOICES` (Zephyr, Puck, Charon, Kore, Fenrir, Leda, Orus, Aoede, …). Unknown names raise `ArgumentError` at build time.
 
 #### Direct Access via `tts`
@@ -1611,7 +1592,7 @@ require 'gemini'
 client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 # Create a new thread
-thread = client.threads.create(parameters: { model: "gemini-2.5-flash" })
+thread = client.threads.create(parameters: { model: "gemini-3.5-flash" })
 thread_id = thread["id"]
 
 # Add a message to the thread
@@ -1647,7 +1628,7 @@ client = Gemini::Client.new(ENV['GEMINI_API_KEY'])
 
 response = client.generate_content(
   "Tell me about the Ruby programming language",
-  model: "gemini-2.5-flash"
+  model: "gemini-3.5-flash"
 )
 
 # Basic response information

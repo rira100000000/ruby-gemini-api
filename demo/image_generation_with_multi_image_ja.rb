@@ -61,7 +61,7 @@ def main
       parameters: {
         prompt: prompt,
         image_paths: [image1_path, image2_path],
-        model: "gemini-2.5-flash-image-preview",
+        model: "gemini-3.1-flash-image",
         temperature: 0.7
       }
     )

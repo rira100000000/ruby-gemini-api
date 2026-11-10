@@ -8,7 +8,7 @@ module Gemini
     def transcribe(parameters: {})
       file = parameters.delete(:file)
       file_uri = parameters.delete(:file_uri)
-      model = parameters.delete(:model) || "gemini-2.5-flash"
+      model = parameters.delete(:model) || Gemini::DEFAULT_MODEL
       language = parameters.delete(:language)
       content_text = parameters.delete(:content_text) || "Transcribe this audio clip"
       
